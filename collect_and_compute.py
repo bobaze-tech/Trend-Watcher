@@ -179,8 +179,12 @@ def main() -> None:
     history = load_history()
     now = datetime.now(timezone.utc).isoformat()
 
+    # TikTok désactivé : l'endpoint testé (Ads Manager) renvoie
+    # systématiquement "no permission" (code 40101) sans session
+    # publicitaire authentifiée — ce n'est pas contournable proprement.
+    # On garde fetch_tiktok() dans le fichier pour référence, mais on ne
+    # l'appelle plus. Seul YouTube est collecté pour l'instant.
     platform_results = {
-        "tiktok": fetch_tiktok(),
         "youtube": fetch_youtube(),
     }
 
