@@ -47,11 +47,30 @@ def fetch_tiktok() -> list[dict]:
     """Retourne une liste de {tag, count} pour TikTok."""
     try:
         r = requests.get(TIKTOK_ENDPOINT, headers=TIKTOK_HEADERS, params=TIKTOK_PARAMS, timeout=15)
-        r.raise_for_status()
-        items = r.json().get("data", {}).get("list", [])
+        print(f"[tiktok] code HTTP reçu : {r.status_code}")
     except requests.RequestException as exc:
-        print(f"[tiktok] échec de la collecte : {exc}")
+        print(f"[tiktok] échec réseau : {exc}")
         return []
+
+    if r.status_code != 200:
+        # On log un extrait du corps de la réponse pour comprendre le blocage
+        # (souvent un 403/429 avec une page HTML de type "access denied").
+        print(f"[tiktok] réponse non-200, extrait du corps : {r.text[:300]!r}")
+        return []
+
+    try:
+        payload = r.json()
+    except ValueError:
+        print(f"[tiktok] réponse non-JSON, extrait : {r.text[:300]!r}")
+        return []
+
+    items = payload.get("data", {}).get("list", [])
+    if not items:
+        # On log les clés de premier niveau pour voir si TikTok a changé
+        # la structure de sa réponse (le chemin data.list ne serait alors
+        # plus le bon).
+        print(f"[tiktok] 0 item trouvé au chemin data.list — clés reçues : {list(payload.keys())}")
+        print(f"[tiktok] extrait complet du payload : {str(payload)[:500]}")
 
     return [
         {"tag": it.get("hashtag_name"), "count": it.get("video_views") or it.get("video_count") or 0}
