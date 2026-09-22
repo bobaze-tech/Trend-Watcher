@@ -3,293 +3,745 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>TrendBoard</title>
+<meta name="theme-color" content="#0f0f0f">
+<title>TrendBoard — tendances YouTube Shorts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg: #000000; --panel: #1c1c1e; --panel2: #2c2c2e; --border: #38383a;
-  --text: #ffffff; --muted: #8e8e93; --accent: #30d158; --danger: #ff453a; --blue: #0a84ff;
+  --red: #ff0033;
+  --red-deep: #b80024;
+  --red-soft: rgba(255, 0, 51, 0.14);
+  --bg: #0f0f0f;
+  --panel: #1a1a1a;
+  --panel2: #272727;
+  --border: #303030;
+  --text: #f1f1f1;
+  --muted: #a3a3a3;
+  --tabbar-bg: rgba(15, 15, 15, 0.86);
+  --ease: cubic-bezier(.22, 1, .36, 1);
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #f2f2f7; --panel: #ffffff; --panel2: #f2f2f7; --border: #e5e5ea;
-    --text: #000000; --muted: #8e8e93;
+    --bg: #ffffff; --panel: #f6f6f6; --panel2: #ebebeb; --border: #e2e2e2;
+    --text: #0f0f0f; --muted: #606060; --red-soft: rgba(255, 0, 51, 0.10);
+    --tabbar-bg: rgba(255, 255, 255, 0.88);
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
 body {
-  margin: 0; background: var(--bg); color: var(--text); height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-header { padding: calc(18px + env(safe-area-inset-top, 0px)) 20px 10px; }
-header .eyebrow { font-size: 0.78rem; color: var(--muted); font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
-header h1 { margin: 2px 0 10px; font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; }
-.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 5px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 8px; }
 
-.platform-switch { display: flex; gap: 6px; background: var(--panel2); padding: 10px 12px; border-radius: 12px; }
-.platform-note { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
-
-main { padding: 6px 16px 90px; max-width: 640px; margin: 0 auto; }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
-
-.summary { background: linear-gradient(160deg, #1c3d2a, #10241a); border-radius: 22px; padding: 20px; margin: 10px 0 18px; border: 1px solid var(--border); }
-.summary .label { font-size: 0.78rem; color: #9fd8b0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-.summary .headline { font-size: 1.5rem; font-weight: 700; margin-top: 6px; line-height: 1.25; }
-.summary .sub { font-size: 0.82rem; color: #9fd8b0; margin-top: 6px; }
-
-.section-title { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 22px 4px 10px; display: flex; justify-content: space-between; }
-.section-title a { color: var(--blue); text-transform: none; font-weight: 600; }
-
-.card { background: var(--panel); border-radius: 18px; overflow: hidden; border: 1px solid var(--border); }
-.row { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--border); }
-.row:last-child { border-bottom: none; }
-.row .left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.rank-badge { width: 28px; height: 28px; border-radius: 8px; background: var(--panel2); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--muted); flex-shrink: 0; }
-.info .tag { font-weight: 600; font-size: 0.94rem; }
-.info .meta { font-size: 0.75rem; color: var(--muted); margin-top: 1px; }
-.right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.pill { display: inline-flex; align-items: center; gap: 3px; font-size: 0.78rem; font-weight: 700; padding: 4px 9px; border-radius: 20px; }
-.pill.up { color: var(--accent); background: rgba(48,209,88,0.14); }
-.pill.down { color: var(--danger); background: rgba(255,69,58,0.14); }
-.star { width: 26px; height: 26px; border-radius: 50%; background: var(--panel2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; border: none; color: var(--muted); }
-.star.active { color: #ffd60a; }
-
-.empty { text-align: center; color: var(--muted); font-size: 0.86rem; padding: 26px 16px; }
-
-.detail { display: none; margin-top: 18px; }
-.detail.show { display: block; }
-.detail .card { padding: 18px 16px 8px; }
-.detail-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
-.detail-head h2 { margin: 0; font-size: 1.05rem; font-weight: 700; }
-.detail-head .close { color: var(--blue); font-size: 0.85rem; font-weight: 600; }
-canvas { max-width: 100%; }
-
-.tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
-  display: flex; background: rgba(28,28,30,0.92); backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+/* ---------- En-tête ---------- */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px; background: var(--tabbar-bg);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
 }
-@media (prefers-color-scheme: light) { .tabbar { background: rgba(255,255,255,0.92); } }
-.tabbtn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 0 8px; background: none; border: none; color: var(--muted); font-size: 0.68rem; font-weight: 600; }
-.tabbtn .ic { font-size: 1.15rem; }
-.tabbtn.active { color: var(--accent); }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+.brand svg { width: 28px; height: 20px; }
+.live { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: pulse 2.2s infinite; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 0, 51, .55); }
+  70% { box-shadow: 0 0 0 8px rgba(255, 0, 51, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 0, 51, 0); }
+}
+.titlebar { padding: 6px 20px 4px; max-width: 640px; margin: 0 auto; }
+.titlebar h1 { margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.1; }
+.titlebar p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+.titlebar.swap h1, .titlebar.swap p { animation: titleIn .4s var(--ease) both; }
+.titlebar.swap p { animation-delay: .05s; }
+@keyframes titleIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-.updated { text-align: center; color: var(--muted); font-size: 0.72rem; margin: 20px 0 4px; }
+.demo-banner {
+  display: none; margin: 10px 20px 0; padding: 8px 12px; border-radius: 10px;
+  background: var(--red-soft); color: var(--red); font-size: 13px; font-weight: 500;
+}
+.demo .demo-banner { display: block; }
+
+main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
+
+/* ---------- Vues et transitions ---------- */
+.view { display: none; }
+.view.active { display: block; }
+.view.enter-right { animation: inRight .38s var(--ease) both; }
+.view.enter-left { animation: inLeft .38s var(--ease) both; }
+@keyframes inRight { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: none; } }
+@keyframes inLeft { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Carte vedette ---------- */
+.hero {
+  position: relative; overflow: hidden; margin: 14px 0 12px; padding: 20px 20px 0;
+  border-radius: 26px; color: #fff; cursor: pointer;
+  background: radial-gradient(120% 90% at 100% 0%, #ff4d6d 0%, rgba(255, 77, 109, 0) 55%),
+              linear-gradient(160deg, #ff0033 0%, #d4002a 45%, #7d0018 100%);
+  transition: transform .2s var(--ease);
+}
+.hero:active { transform: scale(.985); }
+.hero-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 500; opacity: .9; }
+.hero-tag {
+  margin-top: 10px; font-size: clamp(34px, 11vw, 52px); font-weight: 900;
+  letter-spacing: -0.045em; line-height: 1; word-break: break-word;
+}
+.hero-stats { display: flex; gap: 28px; margin-top: 16px; }
+.hero-stats .k { font-size: 12px; opacity: .75; }
+.hero-stats .v { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.hero-spark { display: block; width: calc(100% + 40px); height: 76px; margin: 14px -20px 0; }
+.hero-spark .line { fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.hero-spark .area { fill: rgba(255, 255, 255, .16); }
+.hero-spark.draw .line { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw 1.4s var(--ease) .15s forwards; }
+.hero-spark.draw .area { opacity: 0; animation: fadeIn .8s ease .9s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes fadeIn { to { opacity: 1; } }
+
+/* ---------- Indicateurs rapides ---------- */
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex-shrink: 0; padding: 8px 14px; border-radius: 18px; background: var(--panel2); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.chip b { color: var(--red); font-weight: 700; }
+
+/* ---------- Sections et listes ---------- */
+.section-head { display: flex; justify-content: space-between; align-items: baseline; margin: 24px 4px 10px; }
+.section-head h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.link { background: none; border: none; color: var(--red); font-size: 14px; font-weight: 500; padding: 4px; }
+.group { background: var(--panel); border-radius: 18px; overflow: hidden; }
+.row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+  animation: rowIn .42s var(--ease) both; animation-delay: calc(var(--i, 0) * 32ms);
+  transition: background .15s;
+}
+.row:last-child { border-bottom: none; }
+.row:active { background: var(--panel2); }
+.no-anim .row { animation: none; }
+@keyframes rowIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.rank {
+  width: 30px; height: 30px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--panel2); color: var(--muted); font-size: 13px; font-weight: 700;
+}
+.rank.top { background: var(--red); color: #fff; }
+.info { flex: 1; min-width: 0; }
+.info .tag { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.info .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.bar { height: 4px; border-radius: 2px; background: var(--panel2); margin-top: 7px; overflow: hidden; }
+.bar span { display: block; height: 100%; border-radius: 2px; background: var(--red); transform-origin: left; animation: grow .9s var(--ease) both; animation-delay: calc(var(--i, 0) * 40ms + .1s); }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.spark-mini { width: 56px; height: 24px; flex-shrink: 0; }
+.spark-mini path { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pill { flex-shrink: 0; min-width: 64px; text-align: center; font-size: 13px; font-weight: 700; padding: 5px 9px; border-radius: 14px; font-variant-numeric: tabular-nums; }
+.pill.up { color: #fff; background: var(--red); }
+.pill.down { color: var(--muted); background: var(--panel2); }
+.star {
+  width: 34px; height: 34px; border-radius: 50%; border: none; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--panel2); color: var(--muted);
+}
+.star svg { width: 18px; height: 18px; }
+.star.on { background: var(--red-soft); color: var(--red); }
+.star.on svg { fill: currentColor; }
+.star.pop { animation: pop .42s var(--ease); }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+.search {
+  display: flex; align-items: center; gap: 10px; margin: 14px 0 12px; padding: 0 14px;
+  background: var(--panel2); border-radius: 14px; color: var(--muted);
+}
+.search svg { width: 18px; height: 18px; flex-shrink: 0; }
+.search input {
+  flex: 1; border: none; outline: none; background: none; color: var(--text);
+  font: 400 16px "Roboto", sans-serif; padding: 12px 0;
+}
+
+.empty { text-align: center; padding: 38px 24px 42px; }
+.empty-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 18px; background: var(--red-soft); display: flex; align-items: center; justify-content: center; }
+.empty-icon svg { width: 26px; height: 26px; }
+.empty h3 { margin: 0 0 6px; font-size: 17px; font-weight: 700; }
+.empty p { margin: 0 auto; max-width: 30ch; font-size: 14px; line-height: 1.45; color: var(--muted); }
+.empty .link { margin-top: 10px; }
+
+.skeleton { height: 58px; border-bottom: 1px solid var(--border); background: linear-gradient(90deg, var(--panel) 0%, var(--panel2) 50%, var(--panel) 100%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+.skeleton:last-child { border-bottom: none; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+.footnote { text-align: center; color: var(--muted); font-size: 12px; margin-top: 22px; }
+
+/* ---------- Barre d'onglets ---------- */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--tabbar-bg); border-top: 1px solid var(--border);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+}
+.tabbar-inner { position: relative; display: flex; max-width: 520px; margin: 0 auto; }
+.tab-indicator {
+  position: absolute; top: 2px; left: 0; width: 25%; height: 32px;
+  transition: transform .45s var(--ease); pointer-events: none;
+}
+.tab-indicator::before {
+  content: ""; position: absolute; left: 50%; top: 0; width: 60px; height: 32px;
+  transform: translateX(-50%); border-radius: 16px; background: var(--red-soft);
+}
+.tabbtn {
+  position: relative; z-index: 1; flex: 1; border: none; background: none;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 6px 0 2px; color: var(--muted); font-size: 11px; font-weight: 500;
+  transition: color .25s;
+}
+.tabbtn svg { width: 22px; height: 22px; transition: transform .2s var(--ease); }
+.tabbtn:active svg { transform: scale(.82); }
+.tabbtn.active { color: var(--red); }
+.tabbtn.bounce svg { animation: iconPop .45s var(--ease); }
+@keyframes iconPop { 0% { transform: scale(.8); } 55% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+/* ---------- Fiche détail ---------- */
+.backdrop {
+  position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .55);
+  opacity: 0; pointer-events: none; transition: opacity .3s ease;
+}
+.backdrop.open { opacity: 1; pointer-events: auto; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  max-width: 640px; max-height: 88%; margin: 0 auto; overflow-y: auto;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--panel); border-radius: 26px 26px 0 0;
+  transform: translateY(105%); transition: transform .48s var(--ease);
+}
+.sheet.open { transform: translateY(0); }
+.grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--border); margin: 0 auto 14px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.sheet-head h2 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.1; word-break: break-word; }
+.icon-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--panel2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.icon-btn svg { width: 16px; height: 16px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; }
+.stat { background: var(--panel2); border-radius: 14px; padding: 12px 14px; }
+.stat .k { font-size: 12px; color: var(--muted); }
+.stat .v { font-size: 20px; font-weight: 700; margin-top: 3px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat .v.red { color: var(--red); }
+.chart-wrap { position: relative; height: 200px; }
+.follow-btn {
+  width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 14px;
+  background: var(--red); color: #fff; font-weight: 700; font-size: 15px;
+  transition: transform .15s var(--ease), background .2s;
+}
+.follow-btn:active { transform: scale(.98); }
+.follow-btn.on { background: var(--panel2); color: var(--text); }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); z-index: 60;
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+  padding: 10px 16px; border-radius: 20px; background: var(--text); color: var(--bg);
+  font-size: 14px; font-weight: 500; transition: opacity .3s ease, transform .35s var(--ease);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .hero-spark.draw .line { stroke-dashoffset: 0; }
+  .hero-spark.draw .area { opacity: 1; }
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="eyebrow">
-    <span><span class="dot"></span>TrendBoard</span>
-    <span id="updatedTop"></span>
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 28 20" aria-hidden="true"><rect width="28" height="20" rx="6" fill="#ff0033"/><path d="M11.5 6 L19 10 L11.5 14 Z" fill="#fff"/></svg>
+    TrendBoard
   </div>
-  <h1 id="pageTitle">Accueil</h1>
-  <div class="platform-switch">
-    <span class="platform-note">📺 YouTube Shorts — TikTok en pause (voir README)</span>
-  </div>
+  <div class="live"><span class="pulse"></span><span id="updatedTop">Connexion…</span></div>
 </header>
 
+<div class="titlebar" id="titlebar">
+  <h1 id="pageTitle">Accueil</h1>
+  <p id="pageSub">Tendances YouTube Shorts en France</p>
+</div>
+<div class="demo-banner">Mode démo : les données affichées sont fictives.</div>
+
 <main>
-
   <!-- ACCUEIL -->
-  <section class="tab-panel active" id="tab-accueil">
-    <div class="summary">
-      <div class="label">Le plus chaud en ce moment</div>
-      <div class="headline" id="topHeadline">—</div>
-      <div class="sub" id="topSub">Données en attente</div>
+  <section class="view active" id="view-accueil">
+    <div class="hero" id="hero" role="button" tabindex="0">
+      <div class="hero-top"><span>Le plus chaud en ce moment</span><span id="heroRank"></span></div>
+      <div class="hero-tag" id="heroTag">—</div>
+      <div class="hero-stats">
+        <div><div class="k">Vues</div><div class="v" id="heroViews">—</div></div>
+        <div><div class="k">Évolution</div><div class="v" id="heroPct">—</div></div>
+      </div>
+      <svg class="hero-spark" id="heroSpark" viewBox="0 0 300 76" preserveAspectRatio="none" aria-hidden="true"></svg>
     </div>
+    <div class="chips" id="chips"></div>
 
-    <div class="section-title"><span>Vos # suivis</span><a data-goto="suivis">gérer</a></div>
-    <div class="card"><div id="followedPreview"><div class="empty">Aucun hashtag suivi — va dans l'onglet Suivis pour en choisir.</div></div></div>
+    <div class="section-head"><h2>Vos suivis</h2><button class="link" data-goto="suivis">Gérer</button></div>
+    <div class="group" id="homeFollowed"></div>
 
-    <div class="section-title"><span>Top tendances</span><a data-goto="tendances">tout voir</a></div>
-    <div class="card"><div id="homeTrending"></div></div>
+    <div class="section-head"><h2>En pleine montée</h2><button class="link" data-goto="tendances">Tout voir</button></div>
+    <div class="group" id="homeTrending"></div>
   </section>
 
   <!-- SUIVIS -->
-  <section class="tab-panel" id="tab-suivis">
-    <div class="section-title"><span>Choisissez vos # à suivre</span></div>
-    <div class="card"><div id="followList"></div></div>
+  <section class="view" id="view-suivis">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="searchInput" type="search" placeholder="Rechercher un hashtag" autocomplete="off">
+    </label>
+    <div class="group" id="followList"></div>
   </section>
 
   <!-- TENDANCES -->
-  <section class="tab-panel" id="tab-tendances">
-    <div class="section-title"><span>Classement par momentum</span></div>
-    <div class="card"><div id="trendingList"></div></div>
+  <section class="view" id="view-tendances">
+    <div class="group" id="trendingList" style="margin-top:14px"></div>
   </section>
 
   <!-- RECHERCHÉS -->
-  <section class="tab-panel" id="tab-recherches">
-    <div class="section-title"><span>Les plus populaires (volume)</span></div>
-    <div class="card"><div id="popularList"></div></div>
+  <section class="view" id="view-recherches">
+    <div class="group" id="popularList" style="margin-top:14px"></div>
   </section>
 
-  <div class="detail" id="detail">
-    <div class="card">
-      <div class="detail-head">
-        <h2 id="detailTitle">—</h2>
-        <span class="close" id="closeDetail">Fermer</span>
-      </div>
-      <canvas id="chartCanvas" height="170"></canvas>
-    </div>
-  </div>
-
-  <div class="updated" id="updatedFooter"></div>
+  <div class="footnote" id="footnote"></div>
 </main>
 
-<nav class="tabbar">
-  <button class="tabbtn active" data-tab="accueil"><span class="ic">🏠</span>Accueil</button>
-  <button class="tabbtn" data-tab="suivis"><span class="ic">⭐</span>Suivis</button>
-  <button class="tabbtn" data-tab="tendances"><span class="ic">📈</span>Tendances</button>
-  <button class="tabbtn" data-tab="recherches"><span class="ic">🔍</span>Recherchés</button>
+<nav class="tabbar" aria-label="Navigation">
+  <div class="tabbar-inner">
+    <div class="tab-indicator" id="tabIndicator"></div>
+    <button class="tabbtn active" data-tab="accueil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+      Accueil
+    </button>
+    <button class="tabbtn" data-tab="suivis">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg>
+      Suivis
+    </button>
+    <button class="tabbtn" data-tab="tendances">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+      Tendances
+    </button>
+    <button class="tabbtn" data-tab="recherches">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
+      Recherchés
+    </button>
+  </div>
 </nav>
 
+<div class="backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="grabber"></div>
+  <div class="sheet-head">
+    <h2 id="sheetTitle">—</h2>
+    <button class="icon-btn" id="sheetClose" aria-label="Fermer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div class="stat-grid">
+    <div class="stat"><div class="k">Vues</div><div class="v" id="stViews">—</div></div>
+    <div class="stat"><div class="k">Évolution</div><div class="v" id="stPct">—</div></div>
+    <div class="stat"><div class="k">Rang momentum</div><div class="v" id="stRank">—</div></div>
+    <div class="stat"><div class="k">Accélération</div><div class="v" id="stAccel">—</div></div>
+  </div>
+  <div class="chart-wrap"><canvas id="chartCanvas"></canvas></div>
+  <button class="follow-btn" id="sheetFollow">Suivre ce hashtag</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-const FOLLOW_KEY = "trendboard_followed"; // stocké par plateforme: {tiktok:[...], youtube:[...]}
-let allHashtags = [];
-let platform = "youtube";
-let followedByPlatform = JSON.parse(localStorage.getItem(FOLLOW_KEY) || '{"tiktok":[],"youtube":[]}');
-let chartInstance = null;
+/* ---------- Réglages ---------- */
+const DEMO = new URLSearchParams(location.search).has("demo");
+const FOLLOW_KEY = "trendboard_followed_youtube";
+const TABS = ["accueil", "suivis", "tendances", "recherches"];
+const PAGE_INFO = {
+  accueil:    ["Accueil", "Tendances YouTube Shorts en France"],
+  suivis:     ["Suivis", "Touchez l'étoile pour suivre un hashtag"],
+  tendances:  ["Tendances", "Classées par vitesse de montée"],
+  recherches: ["Recherchés", "Classés par nombre de vues"],
+};
 
-function fmt(n) { return (n || 0).toLocaleString("fr-FR"); }
-function tagLabel(t) { return t.replace(/_/g, " "); }
-function currentFollowed() { return new Set(followedByPlatform[platform] || []); }
-function saveFollowed() { localStorage.setItem(FOLLOW_KEY, JSON.stringify(followedByPlatform)); }
+let items = [];            // hashtags enrichis
+let rankByTag = new Map(); // rang par momentum
+let loaded = false;
+let lastStamp = null;
+let currentTab = "accueil";
+let chart = null;
+let openTag = null;
+let heroTagShown = null;
+let followed = new Set(loadFollowed());
 
-function pillHtml(score) {
-  const up = score >= 0;
-  return `<span class="pill ${up ? "up" : "down"}">${up ? "↑" : "↓"} ${Math.round(Math.abs(score))}</span>`;
+/* ---------- Utilitaires ---------- */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nfCompact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
+const nfFull = new Intl.NumberFormat("fr-FR");
+const compact = (n) => nfCompact.format(Math.round(n || 0));
+const label = (t) => String(t).replace(/_/g, " ");
+const pctText = (p) => (p >= 0 ? "+" : "−") + Math.abs(p).toFixed(Math.abs(p) >= 100 ? 0 : 1).replace(".", ",") + " %";
+
+function loadFollowed() {
+  try { return JSON.parse(localStorage.getItem(FOLLOW_KEY) || "[]"); } catch (e) { return []; }
+}
+function saveFollowed() {
+  try { localStorage.setItem(FOLLOW_KEY, JSON.stringify([...followed])); } catch (e) {}
 }
 
-function rowHtml(h, index, withStar) {
-  const followed = currentFollowed();
-  const star = withStar
-    ? `<button class="star ${followed.has(h.tag) ? "active" : ""}" data-star="${h.tag}">${followed.has(h.tag) ? "★" : "☆"}</button>`
-    : "";
-  const badge = index != null ? `<div class="rank-badge">${index + 1}</div>` : "";
-  return `
-    <div class="row" data-open="${h.tag}">
-      <div class="left">
-        ${badge}
-        <div class="info">
-          <div class="tag">#${tagLabel(h.tag)}</div>
-          <div class="meta">${fmt(h.latest_count)} vues</div>
-        </div>
-      </div>
-      <div class="right">${pillHtml(h.score)}${star}</div>
-    </div>`;
+function enrich(h) {
+  const vals = (h.history || []).map((p) => Number(p.v) || 0);
+  const first = vals[0] || 0;
+  const last = vals.length ? vals[vals.length - 1] : Number(h.latest_count) || 0;
+  const pct = first > 0 ? ((last - first) / first) * 100 : 0;
+  return { ...h, vals, pct, latest_count: Number(h.latest_count) || last };
 }
 
-function render() {
-  const hashtags = allHashtags.filter((h) => h.platform === platform);
+function sparkPath(vals, w, h, pad = 3) {
+  if (!vals || vals.length < 2) return "";
+  const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
+  return vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * w;
+    const y = h - pad - ((v - min) / span) * (h - pad * 2);
+    return `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+}
 
-  if (!hashtags.length) {
-    document.getElementById("topHeadline").textContent = "Aucune donnée";
-    document.getElementById("topSub").textContent = "Le premier passage automatique n'a pas encore eu lieu pour cette plateforme.";
-    ["homeTrending", "followList", "trendingList", "popularList"].forEach((id) => {
-      document.getElementById(id).innerHTML = '<div class="empty">Rien à afficher pour l\'instant.</div>';
-    });
-    document.getElementById("followedPreview").innerHTML = '<div class="empty">Rien à afficher pour l\'instant.</div>';
-    return;
-  }
-
-  const byScore = [...hashtags].sort((a, b) => b.score - a.score);
-  const byVolume = [...hashtags].sort((a, b) => b.latest_count - a.latest_count);
-  const top = byScore[0];
-
-  document.getElementById("topHeadline").textContent = "#" + tagLabel(top.tag);
-  document.getElementById("topSub").textContent = `${fmt(top.latest_count)} vues · score ${Math.round(top.score)}`;
-
-  document.getElementById("homeTrending").innerHTML = byScore.slice(0, 5).map((h, i) => rowHtml(h, i, false)).join("");
-  document.getElementById("trendingList").innerHTML = byScore.map((h, i) => rowHtml(h, i, false)).join("");
-  document.getElementById("popularList").innerHTML = byVolume.map((h, i) => rowHtml(h, i, false)).join("");
-  document.getElementById("followList").innerHTML = byVolume.map((h) => rowHtml(h, null, true)).join("");
-
-  const followed = currentFollowed();
-  const followedRows = hashtags.filter((h) => followed.has(h.tag));
-  document.getElementById("followedPreview").innerHTML = followedRows.length
-    ? followedRows.map((h) => rowHtml(h, null, false)).join("")
-    : '<div class="empty">Aucun hashtag suivi — va dans l\'onglet Suivis pour en choisir.</div>';
-
-  document.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => showDetail(el.dataset.open)));
-  document.querySelectorAll("[data-star]").forEach((el) => {
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const tag = el.dataset.star;
-      const set = currentFollowed();
-      set.has(tag) ? set.delete(tag) : set.add(tag);
-      followedByPlatform[platform] = [...set];
-      saveFollowed();
-      render();
-    });
+/* ---------- Données de démonstration ---------- */
+function demoData() {
+  const now = Date.now();
+  const specs = [
+    ["shorts", 520000, 1.9], ["humour", 310000, 1.35], ["football", 280000, 1.6],
+    ["recettefacile", 90000, 2.4], ["minecraft", 400000, 1.05], ["asmr", 150000, 0.92],
+    ["astuce", 60000, 1.8], ["gaming", 350000, 1.15], ["voyage", 45000, 1.3], ["motivation", 70000, 0.86],
+  ];
+  return specs.map(([tag, base, factor], k) => {
+    const n = 24, history = [];
+    for (let i = 0; i < n; i++) {
+      const t = i / (n - 1);
+      const wobble = 1 + Math.sin(i * 1.7 + k) * 0.015;
+      history.push({ t: new Date(now - (n - 1 - i) * 600000).toISOString(), v: Math.round(base * (1 + (factor - 1) * t * t) * wobble) });
+    }
+    const v = history.map((p) => p.v);
+    const d = v.slice(1).map((x, i) => x - v[i]);
+    const growth = d.reduce((a, b) => a + b, 0) / d.length;
+    const a = d.slice(1).map((x, i) => x - d[i]);
+    const accel = a.reduce((x, y) => x + y, 0) / a.length;
+    return { platform: "youtube", tag, latest_count: v[n - 1], growth, accel, score: growth + accel * 3, history };
   });
 }
 
-function showDetail(tag) {
-  const h = allHashtags.find((x) => x.platform === platform && x.tag === tag);
-  if (!h) return;
-  const detail = document.getElementById("detail");
-  detail.classList.add("show");
-  document.getElementById("detailTitle").textContent = "#" + tagLabel(tag);
-  detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+/* ---------- Rendu ---------- */
+function emptyHtml(title, text, action) {
+  return `<div class="empty">
+    <div class="empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="#ff0033"/></svg></div>
+    <h3>${title}</h3><p>${text}</p>
+    ${action ? `<button class="link" data-goto="${action[0]}">${action[1]}</button>` : ""}
+  </div>`;
+}
+const NO_DATA = () => emptyHtml("Les tendances arrivent", "Les données sont mises à jour toutes les 10 minutes et s'afficheront ici automatiquement.");
 
-  const labels = h.history.map((p) => (p.t || "").slice(5, 16).replace("T", " "));
-  const data = h.history.map((p) => p.v);
-  const ctx = document.getElementById("chartCanvas").getContext("2d");
-  if (chartInstance) chartInstance.destroy();
-  chartInstance = new Chart(ctx, {
+function rowHtml(h, i, mode, maxViews) {
+  const up = h.pct >= 0;
+  const idx = Math.min(i, 14);
+  const rank = rankByTag.get(h.tag);
+  const left = mode === "follow" ? "" : `<div class="rank ${i < 3 ? "top" : ""}">${i + 1}</div>`;
+  let right = `<span class="pill ${up ? "up" : "down"}">${pctText(h.pct)}</span>`;
+  if (mode === "score") {
+    right = `<svg class="spark-mini" viewBox="0 0 56 24" aria-hidden="true"><path d="${sparkPath(h.vals, 56, 24)}" stroke="${up ? "#ff0033" : "var(--muted)"}"/></svg>` + right;
+  }
+  if (mode === "follow") {
+    const on = followed.has(h.tag);
+    right = `<button class="star ${on ? "on" : ""}" data-star="${esc(h.tag)}" aria-label="${on ? "Ne plus suivre" : "Suivre"} ${esc(label(h.tag))}">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg>
+    </button>`;
+  }
+  const bar = mode === "volume" && maxViews
+    ? `<div class="bar"><span style="width:${Math.max(4, (h.latest_count / maxViews) * 100).toFixed(1)}%"></span></div>` : "";
+  const meta = mode === "follow" && rank ? `${compact(h.latest_count)} vues, rang ${rank}` : `${compact(h.latest_count)} vues`;
+  return `<div class="row" data-open="${esc(h.tag)}" role="button" tabindex="0" style="--i:${idx}">
+    ${left}
+    <div class="info"><div class="tag">#${esc(label(h.tag))}</div><div class="meta">${meta}</div>${bar}</div>
+    ${right}
+  </div>`;
+}
+
+function renderHero(byScore) {
+  const hero = $("hero");
+  if (!byScore.length) {
+    $("heroTag").textContent = loaded ? "Bientôt" : "…";
+    $("heroViews").textContent = "—";
+    $("heroPct").textContent = "—";
+    $("heroRank").textContent = "";
+    $("heroSpark").innerHTML = "";
+    hero.style.cursor = "default";
+    return;
+  }
+  const top = byScore[0];
+  hero.style.cursor = "pointer";
+  hero.dataset.open = top.tag;
+  $("heroTag").textContent = "#" + label(top.tag);
+  $("heroRank").textContent = "N°1";
+  $("heroPct").textContent = pctText(top.pct);
+
+  const changed = heroTagShown !== top.tag;
+  heroTagShown = top.tag;
+  if (changed) countUp($("heroViews"), top.latest_count); else $("heroViews").textContent = compact(top.latest_count);
+
+  const line = sparkPath(top.vals, 300, 76, 8);
+  const svg = $("heroSpark");
+  svg.innerHTML = line ? `<path class="area" d="${line} L300,76 L0,76 Z"/><path class="line" d="${line}"/>` : "";
+  if (line && changed) {
+    const path = svg.querySelector(".line");
+    svg.style.setProperty("--len", path.getTotalLength().toFixed(0));
+    svg.classList.remove("draw"); void svg.offsetWidth; svg.classList.add("draw");
+  }
+}
+
+function countUp(el, target) {
+  const start = performance.now(), dur = 900;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) { el.textContent = compact(target); return; }
+  (function tick(now) {
+    const t = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = compact(target * eased);
+    if (t < 1) requestAnimationFrame(tick);
+  })(start);
+}
+
+function renderChips(byScore) {
+  if (!byScore.length) { $("chips").innerHTML = ""; return; }
+  const rising = byScore.filter((h) => h.pct > 0).length;
+  $("chips").innerHTML = `
+    <span class="chip"><b>${byScore.length}</b> hashtags suivis par l'outil</span>
+    <span class="chip"><b>${rising}</b> en hausse</span>
+    <span class="chip"><b>${followed.size}</b> dans vos suivis</span>`;
+}
+
+function renderHomeFollowed() {
+  const list = items.filter((h) => followed.has(h.tag)).sort((a, b) => b.score - a.score);
+  if (!items.length) { $("homeFollowed").innerHTML = NO_DATA(); return; }
+  $("homeFollowed").innerHTML = list.length
+    ? list.slice(0, 5).map((h, i) => rowHtml(h, i, "score")).join("")
+    : emptyHtml("Aucun hashtag suivi", "Suivez les hashtags de votre niche pour les retrouver ici en un coup d'œil.", ["suivis", "Choisir des hashtags"]);
+}
+
+function renderFollowList(noAnim) {
+  const q = $("searchInput").value.trim().toLowerCase().replace(/^#/, "");
+  const el = $("followList");
+  el.classList.toggle("no-anim", !!noAnim);
+  if (!items.length) { el.innerHTML = NO_DATA(); return; }
+  const list = [...items]
+    .filter((h) => !q || label(h.tag).toLowerCase().includes(q))
+    .sort((a, b) => (followed.has(b.tag) - followed.has(a.tag)) || b.latest_count - a.latest_count);
+  el.innerHTML = list.length
+    ? list.map((h, i) => rowHtml(h, i, "follow")).join("")
+    : emptyHtml("Aucun résultat", `Aucun hashtag ne correspond à « ${esc(q)} » pour le moment.`);
+}
+
+function renderAll() {
+  const byScore = [...items].sort((a, b) => b.score - a.score);
+  const byVolume = [...items].sort((a, b) => b.latest_count - a.latest_count);
+  rankByTag = new Map(byScore.map((h, i) => [h.tag, i + 1]));
+  const maxViews = byVolume.length ? byVolume[0].latest_count : 0;
+
+  renderHero(byScore);
+  renderChips(byScore);
+  renderHomeFollowed();
+  renderFollowList(false);
+
+  if (!items.length) {
+    ["homeTrending", "trendingList", "popularList"].forEach((id) => { $(id).innerHTML = NO_DATA(); });
+  } else {
+    $("homeTrending").innerHTML = byScore.slice(0, 5).map((h, i) => rowHtml(h, i, "score")).join("");
+    $("trendingList").innerHTML = byScore.map((h, i) => rowHtml(h, i, "score")).join("");
+    $("popularList").innerHTML = byVolume.map((h, i) => rowHtml(h, i, "volume", maxViews)).join("");
+  }
+}
+
+function renderSkeletons() {
+  const sk = '<div class="skeleton"></div>'.repeat(4);
+  ["homeFollowed", "homeTrending", "followList", "trendingList", "popularList"].forEach((id) => { $(id).innerHTML = sk; });
+}
+
+/* ---------- Navigation entre onglets ---------- */
+function switchTab(tab, fromHash) {
+  if (!TABS.includes(tab)) tab = "accueil";
+  if (tab === currentTab) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const dir = TABS.indexOf(tab) > TABS.indexOf(currentTab) ? "right" : "left";
+
+  const oldView = $("view-" + currentTab), newView = $("view-" + tab);
+  oldView.classList.remove("active", "enter-left", "enter-right");
+  newView.classList.remove("enter-left", "enter-right");
+  newView.classList.add("active");
+  void newView.offsetWidth;
+  newView.classList.add("enter-" + dir);
+
+  document.querySelectorAll(".tabbtn").forEach((b) => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle("active", on);
+    b.classList.remove("bounce");
+    if (on) { void b.offsetWidth; b.classList.add("bounce"); }
+  });
+  $("tabIndicator").style.transform = `translateX(${TABS.indexOf(tab) * 100}%)`;
+
+  const tb = $("titlebar");
+  $("pageTitle").textContent = PAGE_INFO[tab][0];
+  $("pageSub").textContent = PAGE_INFO[tab][1];
+  tb.classList.remove("swap"); void tb.offsetWidth; tb.classList.add("swap");
+
+  currentTab = tab;
+  window.scrollTo({ top: 0 });
+  if (!fromHash && location.hash !== "#" + tab) history.pushState(null, "", "#" + tab);
+}
+window.addEventListener("popstate", () => switchTab(location.hash.slice(1) || "accueil", true));
+
+/* ---------- Suivis ---------- */
+function toggleFollow(tag) {
+  const on = !followed.has(tag);
+  on ? followed.add(tag) : followed.delete(tag);
+  saveFollowed();
+  document.querySelectorAll("[data-star]").forEach((b) => {
+    if (b.dataset.star !== tag) return;
+    b.classList.toggle("on", on);
+    b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+    b.setAttribute("aria-label", (on ? "Ne plus suivre " : "Suivre ") + label(tag));
+  });
+  renderHomeFollowed();
+  renderChips([...items].sort((a, b) => b.score - a.score));
+  if (openTag === tag) updateFollowBtn();
+  toast(on ? `#${label(tag)} ajouté à vos suivis` : `#${label(tag)} retiré de vos suivis`);
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+/* ---------- Fiche détail ---------- */
+function openSheet(tag) {
+  const h = items.find((x) => x.tag === tag);
+  if (!h) return;
+  openTag = tag;
+  $("sheetTitle").textContent = "#" + label(tag);
+  $("stViews").textContent = nfFull.format(h.latest_count);
+  $("stPct").textContent = pctText(h.pct);
+  $("stPct").classList.toggle("red", h.pct >= 0);
+  $("stRank").textContent = rankByTag.has(tag) ? `${rankByTag.get(tag)} sur ${items.length}` : "—";
+  $("stAccel").textContent = (h.accel >= 0 ? "+" : "−") + compact(Math.abs(h.accel || 0));
+  updateFollowBtn();
+
+  $("backdrop").classList.add("open");
+  $("sheet").classList.add("open");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => drawChart(h), 120);
+}
+function closeSheet() {
+  $("backdrop").classList.remove("open");
+  $("sheet").classList.remove("open");
+  document.body.style.overflow = "";
+  openTag = null;
+}
+function updateFollowBtn() {
+  const on = followed.has(openTag);
+  const btn = $("sheetFollow");
+  btn.textContent = on ? "Ne plus suivre" : "Suivre ce hashtag";
+  btn.classList.toggle("on", on);
+}
+function drawChart(h) {
+  if (typeof Chart === "undefined") return;
+  const canvas = $("chartCanvas");
+  const ctx = canvas.getContext("2d");
+  const muted = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#a3a3a3";
+  const grad = ctx.createLinearGradient(0, 0, 0, 200);
+  grad.addColorStop(0, "rgba(255,0,51,0.35)");
+  grad.addColorStop(1, "rgba(255,0,51,0)");
+  const labels = (h.history || []).map((p) => {
+    const d = new Date(p.t);
+    return isNaN(d) ? "" : d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  });
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
     type: "line",
-    data: { labels, datasets: [{ data, borderColor: "#30d158", backgroundColor: "rgba(48,209,88,0.12)", tension: 0.35, fill: true, pointRadius: 0, borderWidth: 2.5 }] },
+    data: { labels, datasets: [{ data: h.vals, borderColor: "#ff0033", backgroundColor: grad, fill: true, tension: 0.35, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }] },
     options: {
-      responsive: true, plugins: { legend: { display: false } },
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 900, easing: "easeOutQuart" },
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => nfFull.format(c.parsed.y) + " vues" } } },
       scales: {
-        x: { ticks: { color: "#8e8e93", maxRotation: 0, autoSkip: true, maxTicksLimit: 4 }, grid: { display: false } },
-        y: { ticks: { color: "#8e8e93" }, grid: { color: "rgba(142,142,147,0.15)" } },
+        x: { ticks: { color: muted, maxRotation: 0, autoSkip: true, maxTicksLimit: 4 }, grid: { display: false } },
+        y: { ticks: { color: muted, callback: (v) => compact(v) }, grid: { color: "rgba(128,128,128,0.15)" } },
       },
     },
   });
 }
-document.getElementById("closeDetail").addEventListener("click", () => document.getElementById("detail").classList.remove("show"));
 
-// Sélecteur de plateforme retiré tant que seul YouTube est collecté.
+/* ---------- Événements ---------- */
+document.addEventListener("click", (e) => {
+  const star = e.target.closest("[data-star]");
+  if (star) { e.stopPropagation(); toggleFollow(star.dataset.star); return; }
+  const go = e.target.closest("[data-goto]");
+  if (go) { switchTab(go.dataset.goto); return; }
+  const tabBtn = e.target.closest(".tabbtn");
+  if (tabBtn) { switchTab(tabBtn.dataset.tab); return; }
+  const open = e.target.closest("[data-open]");
+  if (open && open.dataset.open) openSheet(open.dataset.open);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeSheet();
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-open]")) { e.preventDefault(); openSheet(e.target.dataset.open); }
+});
+$("backdrop").addEventListener("click", closeSheet);
+$("sheetClose").addEventListener("click", closeSheet);
+$("sheetFollow").addEventListener("click", () => openTag && toggleFollow(openTag));
+$("searchInput").addEventListener("input", () => renderFollowList(true));
 
-const titles = { accueil: "Accueil", suivis: "Suivis", tendances: "Tendances", recherches: "Recherchés" };
-function switchTab(tab) {
-  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-  document.getElementById("tab-" + tab).classList.add("active");
-  document.querySelectorAll(".tabbtn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
-  document.getElementById("pageTitle").textContent = titles[tab];
-  document.getElementById("detail").classList.remove("show");
-  window.scrollTo({ top: 0 });
-}
-document.querySelectorAll(".tabbtn").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
-document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.goto)));
-
+/* ---------- Chargement ---------- */
 async function loadData() {
-  try {
-    const res = await fetch("./data.json", { cache: "no-store" });
-    const json = await res.json();
-    allHashtags = json.hashtags || [];
-    const when = json.generated_at ? new Date(json.generated_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
-    document.getElementById("updatedTop").textContent = when ? "MAJ " + when : "";
-    document.getElementById("updatedFooter").textContent = when ? "Dernière mise à jour automatique : " + when : "";
-  } catch (e) {
-    allHashtags = [];
+  let json = null;
+  if (DEMO) {
+    if (loaded) return;
+    json = { generated_at: new Date().toISOString(), hashtags: demoData() };
+  } else {
+    try {
+      const res = await fetch("./data.json?t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      json = await res.json();
+    } catch (e) {
+      json = null;
+    }
   }
-  render();
+  const stamp = json && json.generated_at;
+  if (loaded && stamp === lastStamp) return; // rien de neuf : on ne rejoue pas les animations
+  lastStamp = stamp;
+  items = json ? (json.hashtags || []).filter((h) => !h.platform || h.platform === "youtube").map(enrich) : [];
+  loaded = true;
+
+  const when = stamp ? new Date(stamp) : null;
+  const hhmm = when && !isNaN(when) ? when.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : null;
+  $("updatedTop").textContent = hhmm ? "Mis à jour à " + hhmm : "En attente";
+  $("footnote").textContent = items.length ? "Actualisation automatique toutes les 10 minutes" : "";
+  renderAll();
 }
 
+if (DEMO) document.body.classList.add("demo");
+renderSkeletons();
+const startTab = location.hash.slice(1);
+if (TABS.includes(startTab) && startTab !== "accueil") switchTab(startTab, true);
 loadData();
 setInterval(loadData, 60000);
 </script>
-
 </body>
 </html>
