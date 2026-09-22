@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TrendBoard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #000000; --panel: #1c1c1e; --panel2: #2c2c2e; --border: #38383a;
+  --text: #ffffff; --muted: #8e8e93; --accent: #30d158; --danger: #ff453a; --blue: #0a84ff;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f2f2f7; --panel: #ffffff; --panel2: #f2f2f7; --border: #e5e5ea;
+    --text: #000000; --muted: #8e8e93;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+header { padding: calc(18px + env(safe-area-inset-top, 0px)) 20px 10px; }
+header .eyebrow { font-size: 0.78rem; color: var(--muted); font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+header h1 { margin: 2px 0 10px; font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 5px; }
+
+.platform-switch { display: flex; gap: 6px; background: var(--panel2); padding: 4px; border-radius: 12px; }
+.platform-btn { flex: 1; text-align: center; padding: 8px 0; border-radius: 9px; border: none; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.86rem; }
+.platform-btn.active { background: var(--panel); color: var(--text); }
+
+main { padding: 6px 16px 90px; max-width: 640px; margin: 0 auto; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.summary { background: linear-gradient(160deg, #1c3d2a, #10241a); border-radius: 22px; padding: 20px; margin: 10px 0 18px; border: 1px solid var(--border); }
+.summary .label { font-size: 0.78rem; color: #9fd8b0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.summary .headline { font-size: 1.5rem; font-weight: 700; margin-top: 6px; line-height: 1.25; }
+.summary .sub { font-size: 0.82rem; color: #9fd8b0; margin-top: 6px; }
+
+.section-title { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 22px 4px 10px; display: flex; justify-content: space-between; }
+.section-title a { color: var(--blue); text-transform: none; font-weight: 600; }
+
+.card { background: var(--panel); border-radius: 18px; overflow: hidden; border: 1px solid var(--border); }
+.row { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--border); }
+.row:last-child { border-bottom: none; }
+.row .left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.rank-badge { width: 28px; height: 28px; border-radius: 8px; background: var(--panel2); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+.info .tag { font-weight: 600; font-size: 0.94rem; }
+.info .meta { font-size: 0.75rem; color: var(--muted); margin-top: 1px; }
+.right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.pill { display: inline-flex; align-items: center; gap: 3px; font-size: 0.78rem; font-weight: 700; padding: 4px 9px; border-radius: 20px; }
+.pill.up { color: var(--accent); background: rgba(48,209,88,0.14); }
+.pill.down { color: var(--danger); background: rgba(255,69,58,0.14); }
+.star { width: 26px; height: 26px; border-radius: 50%; background: var(--panel2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; border: none; color: var(--muted); }
+.star.active { color: #ffd60a; }
+
+.empty { text-align: center; color: var(--muted); font-size: 0.86rem; padding: 26px 16px; }
+
+.detail { display: none; margin-top: 18px; }
+.detail.show { display: block; }
+.detail .card { padding: 18px 16px 8px; }
+.detail-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.detail-head h2 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.detail-head .close { color: var(--blue); font-size: 0.85rem; font-weight: 600; }
+canvas { max-width: 100%; }
+
+.tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+  display: flex; background: rgba(28,28,30,0.92); backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: light) { .tabbar { background: rgba(255,255,255,0.92); } }
+.tabbtn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 0 8px; background: none; border: none; color: var(--muted); font-size: 0.68rem; font-weight: 600; }
+.tabbtn .ic { font-size: 1.15rem; }
+.tabbtn.active { color: var(--accent); }
+
+.updated { text-align: center; color: var(--muted); font-size: 0.72rem; margin: 20px 0 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">
+    <span><span class="dot"></span>TrendBoard</span>
+    <span id="updatedTop"></span>
+  </div>
+  <h1 id="pageTitle">Accueil</h1>
+  <div class="platform-switch">
+    <button class="platform-btn active" data-platform="tiktok">TikTok</button>
+    <button class="platform-btn" data-platform="youtube">YouTube Shorts</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ACCUEIL -->
+  <section class="tab-panel active" id="tab-accueil">
+    <div class="summary">
+      <div class="label">Le plus chaud en ce moment</div>
+      <div class="headline" id="topHeadline">—</div>
+      <div class="sub" id="topSub">Données en attente</div>
+    </div>
+
+    <div class="section-title"><span>Vos # suivis</span><a data-goto="suivis">gérer</a></div>
+    <div class="card"><div id="followedPreview"><div class="empty">Aucun hashtag suivi — va dans l'onglet Suivis pour en choisir.</div></div></div>
+
+    <div class="section-title"><span>Top tendances</span><a data-goto="tendances">tout voir</a></div>
+    <div class="card"><div id="homeTrending"></div></div>
+  </section>
+
+  <!-- SUIVIS -->
+  <section class="tab-panel" id="tab-suivis">
+    <div class="section-title"><span>Choisissez vos # à suivre</span></div>
+    <div class="card"><div id="followList"></div></div>
+  </section>
+
+  <!-- TENDANCES -->
+  <section class="tab-panel" id="tab-tendances">
+    <div class="section-title"><span>Classement par momentum</span></div>
+    <div class="card"><div id="trendingList"></div></div>
+  </section>
+
+  <!-- RECHERCHÉS -->
+  <section class="tab-panel" id="tab-recherches">
+    <div class="section-title"><span>Les plus populaires (volume)</span></div>
+    <div class="card"><div id="popularList"></div></div>
+  </section>
+
+  <div class="detail" id="detail">
+    <div class="card">
+      <div class="detail-head">
+        <h2 id="detailTitle">—</h2>
+        <span class="close" id="closeDetail">Fermer</span>
+      </div>
+      <canvas id="chartCanvas" height="170"></canvas>
+    </div>
+  </div>
+
+  <div class="updated" id="updatedFooter"></div>
+</main>
+
+<nav class="tabbar">
+  <button class="tabbtn active" data-tab="accueil"><span class="ic">🏠</span>Accueil</button>
+  <button class="tabbtn" data-tab="suivis"><span class="ic">⭐</span>Suivis</button>
+  <button class="tabbtn" data-tab="tendances"><span class="ic">📈</span>Tendances</button>
+  <button class="tabbtn" data-tab="recherches"><span class="ic">🔍</span>Recherchés</button>
+</nav>
+
+<script>
+const FOLLOW_KEY = "trendboard_followed"; // stocké par plateforme: {tiktok:[...], youtube:[...]}
+let allHashtags = [];
+let platform = "tiktok";
+let followedByPlatform = JSON.parse(localStorage.getItem(FOLLOW_KEY) || '{"tiktok":[],"youtube":[]}');
+let chartInstance = null;
+
+function fmt(n) { return (n || 0).toLocaleString("fr-FR"); }
+function tagLabel(t) { return t.replace(/_/g, " "); }
+function currentFollowed() { return new Set(followedByPlatform[platform] || []); }
+function saveFollowed() { localStorage.setItem(FOLLOW_KEY, JSON.stringify(followedByPlatform)); }
+
+function pillHtml(score) {
+  const up = score >= 0;
+  return `<span class="pill ${up ? "up" : "down"}">${up ? "↑" : "↓"} ${Math.round(Math.abs(score))}</span>`;
+}
+
+function rowHtml(h, index, withStar) {
+  const followed = currentFollowed();
+  const star = withStar
+    ? `<button class="star ${followed.has(h.tag) ? "active" : ""}" data-star="${h.tag}">${followed.has(h.tag) ? "★" : "☆"}</button>`
+    : "";
+  const badge = index != null ? `<div class="rank-badge">${index + 1}</div>` : "";
+  return `
+    <div class="row" data-open="${h.tag}">
+      <div class="left">
+        ${badge}
+        <div class="info">
+          <div class="tag">#${tagLabel(h.tag)}</div>
+          <div class="meta">${fmt(h.latest_count)} vues</div>
+        </div>
+      </div>
+      <div class="right">${pillHtml(h.score)}${star}</div>
+    </div>`;
+}
+
+function render() {
+  const hashtags = allHashtags.filter((h) => h.platform === platform);
+
+  if (!hashtags.length) {
+    document.getElementById("topHeadline").textContent = "Aucune donnée";
+    document.getElementById("topSub").textContent = "Le premier passage automatique n'a pas encore eu lieu pour cette plateforme.";
+    ["homeTrending", "followList", "trendingList", "popularList"].forEach((id) => {
+      document.getElementById(id).innerHTML = '<div class="empty">Rien à afficher pour l\'instant.</div>';
+    });
+    document.getElementById("followedPreview").innerHTML = '<div class="empty">Rien à afficher pour l\'instant.</div>';
+    return;
+  }
+
+  const byScore = [...hashtags].sort((a, b) => b.score - a.score);
+  const byVolume = [...hashtags].sort((a, b) => b.latest_count - a.latest_count);
+  const top = byScore[0];
+
+  document.getElementById("topHeadline").textContent = "#" + tagLabel(top.tag);
+  document.getElementById("topSub").textContent = `${fmt(top.latest_count)} vues · score ${Math.round(top.score)}`;
+
+  document.getElementById("homeTrending").innerHTML = byScore.slice(0, 5).map((h, i) => rowHtml(h, i, false)).join("");
+  document.getElementById("trendingList").innerHTML = byScore.map((h, i) => rowHtml(h, i, false)).join("");
+  document.getElementById("popularList").innerHTML = byVolume.map((h, i) => rowHtml(h, i, false)).join("");
+  document.getElementById("followList").innerHTML = byVolume.map((h) => rowHtml(h, null, true)).join("");
+
+  const followed = currentFollowed();
+  const followedRows = hashtags.filter((h) => followed.has(h.tag));
+  document.getElementById("followedPreview").innerHTML = followedRows.length
+    ? followedRows.map((h) => rowHtml(h, null, false)).join("")
+    : '<div class="empty">Aucun hashtag suivi — va dans l\'onglet Suivis pour en choisir.</div>';
+
+  document.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => showDetail(el.dataset.open)));
+  document.querySelectorAll("[data-star]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const tag = el.dataset.star;
+      const set = currentFollowed();
+      set.has(tag) ? set.delete(tag) : set.add(tag);
+      followedByPlatform[platform] = [...set];
+      saveFollowed();
+      render();
+    });
+  });
+}
+
+function showDetail(tag) {
+  const h = allHashtags.find((x) => x.platform === platform && x.tag === tag);
+  if (!h) return;
+  const detail = document.getElementById("detail");
+  detail.classList.add("show");
+  document.getElementById("detailTitle").textContent = "#" + tagLabel(tag);
+  detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+  const labels = h.history.map((p) => (p.t || "").slice(5, 16).replace("T", " "));
+  const data = h.history.map((p) => p.v);
+  const ctx = document.getElementById("chartCanvas").getContext("2d");
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets: [{ data, borderColor: "#30d158", backgroundColor: "rgba(48,209,88,0.12)", tension: 0.35, fill: true, pointRadius: 0, borderWidth: 2.5 }] },
+    options: {
+      responsive: true, plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#8e8e93", maxRotation: 0, autoSkip: true, maxTicksLimit: 4 }, grid: { display: false } },
+        y: { ticks: { color: "#8e8e93" }, grid: { color: "rgba(142,142,147,0.15)" } },
+      },
+    },
+  });
+}
+document.getElementById("closeDetail").addEventListener("click", () => document.getElementById("detail").classList.remove("show"));
+
+document.querySelectorAll(".platform-btn").forEach((b) => {
+  b.addEventListener("click", () => {
+    platform = b.dataset.platform;
+    document.querySelectorAll(".platform-btn").forEach((x) => x.classList.toggle("active", x === b));
+    document.getElementById("detail").classList.remove("show");
+    render();
+  });
+});
+
+const titles = { accueil: "Accueil", suivis: "Suivis", tendances: "Tendances", recherches: "Recherchés" };
+function switchTab(tab) {
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  document.querySelectorAll(".tabbtn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  document.getElementById("pageTitle").textContent = titles[tab];
+  document.getElementById("detail").classList.remove("show");
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll(".tabbtn").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.goto)));
+
+async function loadData() {
+  try {
+    const res = await fetch("./data.json", { cache: "no-store" });
+    const json = await res.json();
+    allHashtags = json.hashtags || [];
+    const when = json.generated_at ? new Date(json.generated_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
+    document.getElementById("updatedTop").textContent = when ? "MAJ " + when : "";
+    document.getElementById("updatedFooter").textContent = when ? "Dernière mise à jour automatique : " + when : "";
+  } catch (e) {
+    allHashtags = [];
+  }
+  render();
+}
+
+loadData();
+setInterval(loadData, 60000);
+</script>
+
+</body>
+</html>
