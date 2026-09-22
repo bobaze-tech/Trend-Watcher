@@ -31,9 +31,8 @@ header .eyebrow { font-size: 0.78rem; color: var(--muted); font-weight: 500; dis
 header h1 { margin: 2px 0 10px; font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 5px; }
 
-.platform-switch { display: flex; gap: 6px; background: var(--panel2); padding: 4px; border-radius: 12px; }
-.platform-btn { flex: 1; text-align: center; padding: 8px 0; border-radius: 9px; border: none; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.86rem; }
-.platform-btn.active { background: var(--panel); color: var(--text); }
+.platform-switch { display: flex; gap: 6px; background: var(--panel2); padding: 10px 12px; border-radius: 12px; }
+.platform-note { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
 
 main { padding: 6px 16px 90px; max-width: 640px; margin: 0 auto; }
 .tab-panel { display: none; }
@@ -94,8 +93,7 @@ canvas { max-width: 100%; }
   </div>
   <h1 id="pageTitle">Accueil</h1>
   <div class="platform-switch">
-    <button class="platform-btn active" data-platform="tiktok">TikTok</button>
-    <button class="platform-btn" data-platform="youtube">YouTube Shorts</button>
+    <span class="platform-note">📺 YouTube Shorts — TikTok en pause (voir README)</span>
   </div>
 </header>
 
@@ -157,7 +155,7 @@ canvas { max-width: 100%; }
 <script>
 const FOLLOW_KEY = "trendboard_followed"; // stocké par plateforme: {tiktok:[...], youtube:[...]}
 let allHashtags = [];
-let platform = "tiktok";
+let platform = "youtube";
 let followedByPlatform = JSON.parse(localStorage.getItem(FOLLOW_KEY) || '{"tiktok":[],"youtube":[]}');
 let chartInstance = null;
 
@@ -261,14 +259,7 @@ function showDetail(tag) {
 }
 document.getElementById("closeDetail").addEventListener("click", () => document.getElementById("detail").classList.remove("show"));
 
-document.querySelectorAll(".platform-btn").forEach((b) => {
-  b.addEventListener("click", () => {
-    platform = b.dataset.platform;
-    document.querySelectorAll(".platform-btn").forEach((x) => x.classList.toggle("active", x === b));
-    document.getElementById("detail").classList.remove("show");
-    render();
-  });
-});
+// Sélecteur de plateforme retiré tant que seul YouTube est collecté.
 
 const titles = { accueil: "Accueil", suivis: "Suivis", tendances: "Tendances", recherches: "Recherchés" };
 function switchTab(tab) {
