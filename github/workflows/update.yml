@@ -1,0 +1,34 @@
+name: Update TrendBoard data
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Collecte TikTok + YouTube
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python collect_and_compute.py
+
+      - name: Commit et push si data.json a changé
+        run: |
+          git config user.name "trendboard-bot"
+          git config user.email "bot@trendboard.local"
+          git add data.json history.json
+          git diff --cached --quiet || git commit -m "Mise à jour automatique des trends"
+          git push
