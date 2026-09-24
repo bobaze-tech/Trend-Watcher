@@ -3,16 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TrendBoard : les tendances YouTube Shorts en direct</title>
+<meta name="description" content="Les hashtags YouTube Shorts qui montent en France, mesurés en vues gagnées par heure et mis à jour toutes les 10 minutes.">
 <meta name="theme-color" content="#0f0f0f">
-<title>TrendBoard — tendances YouTube Shorts</title>
+<link rel="canonical" href="https://bobaze-tech.github.io/Trend-Watcher/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TrendBoard">
+<meta property="og:title" content="TrendBoard : les tendances YouTube Shorts en direct">
+<meta property="og:description" content="Les hashtags qui montent en France, mis à jour toutes les 10 minutes.">
+<meta property="og:url" content="https://bobaze-tech.github.io/Trend-Watcher/">
+<meta property="og:image" content="https://bobaze-tech.github.io/Trend-Watcher/og-image.png">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TrendBoard">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 <style>
 :root {
   --red: #ff0033;
-  --red-deep: #b80024;
   --red-soft: rgba(255, 0, 51, 0.14);
   --bg: #0f0f0f;
   --panel: #1a1a1a;
@@ -20,7 +36,7 @@
   --border: #303030;
   --text: #f1f1f1;
   --muted: #a3a3a3;
-  --tabbar-bg: rgba(15, 15, 15, 0.86);
+  --bar-bg: rgba(15, 15, 15, 0.86);
   --ease: cubic-bezier(.22, 1, .36, 1);
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
@@ -28,9 +44,9 @@
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #ffffff; --panel: #f6f6f6; --panel2: #ebebeb; --border: #e2e2e2;
-    --text: #0f0f0f; --muted: #606060; --red-soft: rgba(255, 0, 51, 0.10);
-    --tabbar-bg: rgba(255, 255, 255, 0.88);
+    --bg: #ffffff; --panel: #f5f5f5; --panel2: #e9e9e9; --border: #e0e0e0;
+    --text: #0f0f0f; --muted: #5f5f5f; --red-soft: rgba(255, 0, 51, 0.10);
+    --bar-bg: rgba(255, 255, 255, 0.88);
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -41,36 +57,40 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 button { font: inherit; color: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
 :focus-visible { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 8px; }
 
 /* ---------- En-tête ---------- */
 .topbar {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 20px; background: var(--tabbar-bg);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px 10px 20px; background: var(--bar-bg);
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
 .brand svg { width: 28px; height: 20px; }
-.live { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
-.pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: pulse 2.2s infinite; }
+.top-right { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.live { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; animation: pulse 2.2s infinite; }
+.live.stale { color: var(--red); }
+.live.stale .pulse, .live.off .pulse { animation: none; background: var(--muted); }
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(255, 0, 51, .55); }
   70% { box-shadow: 0 0 0 8px rgba(255, 0, 51, 0); }
   100% { box-shadow: 0 0 0 0 rgba(255, 0, 51, 0); }
 }
-.titlebar { padding: 6px 20px 4px; max-width: 640px; margin: 0 auto; }
+.icon-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: none; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; background: var(--panel2);
+}
+.icon-btn svg { width: 17px; height: 17px; }
+
+.titlebar { padding: 6px 20px 2px; max-width: 640px; margin: 0 auto; }
 .titlebar h1 { margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.1; }
 .titlebar p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
 .titlebar.swap h1, .titlebar.swap p { animation: titleIn .4s var(--ease) both; }
 .titlebar.swap p { animation-delay: .05s; }
 @keyframes titleIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-
-.demo-banner {
-  display: none; margin: 10px 20px 0; padding: 8px 12px; border-radius: 10px;
-  background: var(--red-soft); color: var(--red); font-size: 13px; font-weight: 500;
-}
-.demo .demo-banner { display: block; }
 
 main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 
@@ -85,21 +105,24 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 /* ---------- Carte vedette ---------- */
 .hero {
   position: relative; overflow: hidden; margin: 14px 0 12px; padding: 20px 20px 0;
-  border-radius: 26px; color: #fff; cursor: pointer;
+  border-radius: 26px; color: #fff;
   background: radial-gradient(120% 90% at 100% 0%, #ff4d6d 0%, rgba(255, 77, 109, 0) 55%),
               linear-gradient(160deg, #ff0033 0%, #d4002a 45%, #7d0018 100%);
   transition: transform .2s var(--ease);
 }
-.hero:active { transform: scale(.985); }
-.hero-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 500; opacity: .9; }
+.hero.clickable { cursor: pointer; }
+.hero.clickable:active { transform: scale(.985); }
+.hero-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
+.hero-top .badge { background: rgba(255, 255, 255, .2); color: #fff; }
 .hero-tag {
   margin-top: 10px; font-size: clamp(34px, 11vw, 52px); font-weight: 900;
-  letter-spacing: -0.045em; line-height: 1; word-break: break-word;
+  letter-spacing: -0.045em; line-height: 1.02; overflow-wrap: anywhere;
 }
-.hero-stats { display: flex; gap: 28px; margin-top: 16px; }
-.hero-stats .k { font-size: 12px; opacity: .75; }
+.hero-msg { margin: 10px 0 20px; font-size: 15px; line-height: 1.45; max-width: 34ch; opacity: .92; }
+.hero-stats { display: flex; gap: 26px; margin-top: 16px; flex-wrap: wrap; }
+.hero-stats .k { font-size: 12px; opacity: .78; }
 .hero-stats .v { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
-.hero-spark { display: block; width: calc(100% + 40px); height: 76px; margin: 14px -20px 0; }
+.hero-spark { display: block; width: calc(100% + 40px); height: 70px; margin: 14px -20px 0; }
 .hero-spark .line { fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .hero-spark .area { fill: rgba(255, 255, 255, .16); }
 .hero-spark.draw .line { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw 1.4s var(--ease) .15s forwards; }
@@ -107,11 +130,18 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes fadeIn { to { opacity: 1; } }
 
-/* ---------- Indicateurs rapides ---------- */
+/* ---------- Chiffres clés et filtres ---------- */
 .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
-.chip { flex-shrink: 0; padding: 8px 14px; border-radius: 18px; background: var(--panel2); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.chip {
+  flex-shrink: 0; padding: 8px 14px; border-radius: 18px; border: none;
+  background: var(--panel2); font-size: 13px; font-weight: 500; white-space: nowrap;
+  transition: background .25s, color .25s, transform .15s var(--ease);
+}
 .chip b { color: var(--red); font-weight: 700; }
+button.chip:active { transform: scale(.95); }
+button.chip.on { background: var(--red); color: #fff; }
+.filters { margin: 14px 0 12px; }
 
 /* ---------- Sections et listes ---------- */
 .section-head { display: flex; justify-content: space-between; align-items: baseline; margin: 24px 4px 10px; }
@@ -121,12 +151,13 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 .row {
   display: flex; align-items: center; gap: 12px; padding: 12px 14px;
   border-bottom: 1px solid var(--border); cursor: pointer;
-  animation: rowIn .42s var(--ease) both; animation-delay: calc(var(--i, 0) * 32ms);
+  animation: rowIn .42s var(--ease) both; animation-delay: calc(var(--i, 0) * 30ms);
   transition: background .15s;
 }
 .row:last-child { border-bottom: none; }
 .row:active { background: var(--panel2); }
-.no-anim .row { animation: none; }
+.row.dim .tag { color: var(--muted); }
+.no-anim .row, .no-anim .bar span { animation: none; }
 @keyframes rowIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .rank {
   width: 30px; height: 30px; border-radius: 10px; flex-shrink: 0;
@@ -136,15 +167,21 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 .rank.top { background: var(--red); color: #fff; }
 .info { flex: 1; min-width: 0; }
 .info .tag { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.info .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.info .meta { font-size: 13px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar { height: 4px; border-radius: 2px; background: var(--panel2); margin-top: 7px; overflow: hidden; }
 .bar span { display: block; height: 100%; border-radius: 2px; background: var(--red); transform-origin: left; animation: grow .9s var(--ease) both; animation-delay: calc(var(--i, 0) * 40ms + .1s); }
 @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.spark-mini { width: 56px; height: 24px; flex-shrink: 0; }
+.spark-mini { width: 52px; height: 24px; flex-shrink: 0; }
 .spark-mini path { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.pill { flex-shrink: 0; min-width: 64px; text-align: center; font-size: 13px; font-weight: 700; padding: 5px 9px; border-radius: 14px; font-variant-numeric: tabular-nums; }
-.pill.up { color: #fff; background: var(--red); }
-.pill.down { color: var(--muted); background: var(--panel2); }
+.val { text-align: right; flex-shrink: 0; min-width: 76px; }
+.val b { display: block; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.val small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.st-boom, .st-up, .st-new { color: var(--red) !important; font-weight: 500; }
+.val small.st-boom { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 8px; background: var(--red); color: #fff !important; font-weight: 700; }
+@media (max-width: 370px) { .spark-mini { display: none; } }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 12px; background: var(--panel2); color: var(--muted); white-space: nowrap; }
+.badge.st-boom { background: var(--red); color: #fff !important; }
+.badge.st-up, .badge.st-new { background: var(--red-soft); }
 .star {
   width: 34px; height: 34px; border-radius: 50%; border: none; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -155,6 +192,12 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 .star.on svg { fill: currentColor; }
 .star.pop { animation: pop .42s var(--ease); }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.cta-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border: none; background: none; text-align: left; }
+.cta-row .info .tag, .cta-row .info .meta { display: block; }
+.cta-icon { width: 36px; height: 36px; border-radius: 12px; background: var(--red-soft); color: var(--red); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cta-icon svg { width: 18px; height: 18px; }
+.chev { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
+.more { display: block; width: 100%; padding: 14px; border: none; border-top: 1px solid var(--border); background: none; color: var(--red); font-weight: 500; font-size: 14px; }
 
 .search {
   display: flex; align-items: center; gap: 10px; margin: 14px 0 12px; padding: 0 14px;
@@ -162,44 +205,38 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 }
 .search svg { width: 18px; height: 18px; flex-shrink: 0; }
 .search input {
-  flex: 1; border: none; outline: none; background: none; color: var(--text);
+  flex: 1; min-width: 0; border: none; outline: none; background: none; color: var(--text);
   font: 400 16px "Roboto", sans-serif; padding: 12px 0;
 }
 
-.empty { text-align: center; padding: 38px 24px 42px; }
+.empty { text-align: center; padding: 36px 24px 40px; }
 .empty-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 18px; background: var(--red-soft); display: flex; align-items: center; justify-content: center; }
 .empty-icon svg { width: 26px; height: 26px; }
 .empty h3 { margin: 0 0 6px; font-size: 17px; font-weight: 700; }
-.empty p { margin: 0 auto; max-width: 30ch; font-size: 14px; line-height: 1.45; color: var(--muted); }
+.empty p { margin: 0 auto; max-width: 32ch; font-size: 14px; line-height: 1.45; color: var(--muted); }
 .empty .link { margin-top: 10px; }
 
 .skeleton { height: 58px; border-bottom: 1px solid var(--border); background: linear-gradient(90deg, var(--panel) 0%, var(--panel2) 50%, var(--panel) 100%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
 .skeleton:last-child { border-bottom: none; }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
-.footnote { text-align: center; color: var(--muted); font-size: 12px; margin-top: 22px; }
+.footnote { text-align: center; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 22px; }
+.footnote button { background: none; border: none; color: var(--red); font-size: 12px; padding: 0; }
 
 /* ---------- Barre d'onglets ---------- */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
-  background: var(--tabbar-bg); border-top: 1px solid var(--border);
+  background: var(--bar-bg); border-top: 1px solid var(--border);
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
 }
 .tabbar-inner { position: relative; display: flex; max-width: 520px; margin: 0 auto; }
-.tab-indicator {
-  position: absolute; top: 2px; left: 0; width: 25%; height: 32px;
-  transition: transform .45s var(--ease); pointer-events: none;
-}
-.tab-indicator::before {
-  content: ""; position: absolute; left: 50%; top: 0; width: 60px; height: 32px;
-  transform: translateX(-50%); border-radius: 16px; background: var(--red-soft);
-}
+.tab-indicator { position: absolute; top: 2px; left: 0; width: 25%; height: 32px; transition: transform .45s var(--ease); pointer-events: none; }
+.tab-indicator::before { content: ""; position: absolute; left: 50%; top: 0; width: 60px; height: 32px; transform: translateX(-50%); border-radius: 16px; background: var(--red-soft); }
 .tabbtn {
   position: relative; z-index: 1; flex: 1; border: none; background: none;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 6px 0 2px; color: var(--muted); font-size: 11px; font-weight: 500;
-  transition: color .25s;
+  padding: 6px 0 2px; color: var(--muted); font-size: 11px; font-weight: 500; transition: color .25s;
 }
 .tabbtn svg { width: 22px; height: 22px; transition: transform .2s var(--ease); }
 .tabbtn:active svg { transform: scale(.82); }
@@ -207,42 +244,52 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 .tabbtn.bounce svg { animation: iconPop .45s var(--ease); }
 @keyframes iconPop { 0% { transform: scale(.8); } 55% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
-/* ---------- Fiche détail ---------- */
-.backdrop {
-  position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .55);
-  opacity: 0; pointer-events: none; transition: opacity .3s ease;
-}
+/* ---------- Feuilles (détail, guide) ---------- */
+.backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .55); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
 .backdrop.open { opacity: 1; pointer-events: auto; }
 .sheet {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-  max-width: 640px; max-height: 88%; margin: 0 auto; overflow-y: auto;
-  padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  max-width: 640px; max-height: 90%; margin: 0 auto; overflow-y: auto; overscroll-behavior: contain;
+  padding: 10px 20px calc(22px + env(safe-area-inset-bottom, 0px));
   background: var(--panel); border-radius: 26px 26px 0 0;
   transform: translateY(105%); transition: transform .48s var(--ease);
 }
 .sheet.open { transform: translateY(0); }
+.sheet-body.swap { animation: titleIn .35s var(--ease) both; }
 .grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--border); margin: 0 auto 14px; }
 .sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.sheet-head h2 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.1; word-break: break-word; }
-.icon-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--panel2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.icon-btn svg { width: 16px; height: 16px; }
+.sheet-head h2 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.1; overflow-wrap: anywhere; }
+.sheet-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.notice { margin: 14px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--panel2); font-size: 14px; line-height: 1.45; color: var(--muted); }
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; }
 .stat { background: var(--panel2); border-radius: 14px; padding: 12px 14px; }
 .stat .k { font-size: 12px; color: var(--muted); }
 .stat .v { font-size: 20px; font-weight: 700; margin-top: 3px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .stat .v.red { color: var(--red); }
-.chart-wrap { position: relative; height: 200px; }
+.sheet h3 { margin: 20px 0 10px; font-size: 16px; font-weight: 700; }
+.chart-wrap { position: relative; height: 190px; }
+.chart-empty { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; color: var(--muted); background: var(--panel2); border-radius: 14px; padding: 0 20px; }
+.related { display: flex; flex-wrap: wrap; gap: 8px; }
+.video { display: flex; gap: 12px; align-items: center; padding: 8px 0; }
+.video + .video { border-top: 1px solid var(--border); }
+.thumb { width: 96px; height: 54px; border-radius: 10px; flex-shrink: 0; object-fit: cover; background: var(--panel2); }
+.video .t { font-size: 14px; font-weight: 500; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.video .c { font-size: 12px; color: var(--muted); margin-top: 3px; }
 .follow-btn {
-  width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 14px;
+  width: 100%; margin-top: 20px; padding: 14px; border: none; border-radius: 14px;
   background: var(--red); color: #fff; font-weight: 700; font-size: 15px;
   transition: transform .15s var(--ease), background .2s;
 }
 .follow-btn:active { transform: scale(.98); }
 .follow-btn.on { background: var(--panel2); color: var(--text); }
+.guide dl { margin: 16px 0 0; }
+.guide dt { font-weight: 700; font-size: 15px; margin-top: 16px; }
+.guide dd { margin: 4px 0 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.guide .badge { margin-right: 6px; }
 
 .toast {
   position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); z-index: 60;
-  transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none; max-width: calc(100% - 40px);
   padding: 10px 16px; border-radius: 20px; background: var(--text); color: var(--bg);
   font-size: 14px; font-weight: 500; transition: opacity .3s ease, transform .35s var(--ease);
 }
@@ -262,52 +309,60 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
     <svg viewBox="0 0 28 20" aria-hidden="true"><rect width="28" height="20" rx="6" fill="#ff0033"/><path d="M11.5 6 L19 10 L11.5 14 Z" fill="#fff"/></svg>
     TrendBoard
   </div>
-  <div class="live"><span class="pulse"></span><span id="updatedTop">Connexion…</span></div>
+  <div class="top-right">
+    <div class="live" id="live"><span class="pulse"></span><span id="updatedTop">Chargement…</span></div>
+    <button class="icon-btn" id="guideBtn" aria-label="Comment lire les chiffres">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/></svg>
+    </button>
+  </div>
 </header>
 
 <div class="titlebar" id="titlebar">
   <h1 id="pageTitle">Accueil</h1>
-  <p id="pageSub">Tendances YouTube Shorts en France</p>
+  <p id="pageSub">Les hashtags YouTube Shorts qui montent en France</p>
 </div>
-<div class="demo-banner">Mode démo : les données affichées sont fictives.</div>
 
 <main>
   <!-- ACCUEIL -->
   <section class="view active" id="view-accueil">
-    <div class="hero" id="hero" role="button" tabindex="0">
-      <div class="hero-top"><span>Le plus chaud en ce moment</span><span id="heroRank"></span></div>
-      <div class="hero-tag" id="heroTag">—</div>
-      <div class="hero-stats">
-        <div><div class="k">Vues</div><div class="v" id="heroViews">—</div></div>
-        <div><div class="k">Évolution</div><div class="v" id="heroPct">—</div></div>
-      </div>
-      <svg class="hero-spark" id="heroSpark" viewBox="0 0 300 76" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div class="hero" id="hero" tabindex="0">
+      <div class="hero-top"><span>Le plus rapide en ce moment</span><span id="heroBadge"></span></div>
+      <div class="hero-tag" id="heroTag">…</div>
+      <div id="heroBody"></div>
     </div>
     <div class="chips" id="chips"></div>
 
-    <div class="section-head"><h2>Vos suivis</h2><button class="link" data-goto="suivis">Gérer</button></div>
-    <div class="group" id="homeFollowed"></div>
-
     <div class="section-head"><h2>En pleine montée</h2><button class="link" data-goto="tendances">Tout voir</button></div>
     <div class="group" id="homeTrending"></div>
+
+    <div id="homeNewWrap" hidden>
+      <div class="section-head"><h2>Apparus récemment</h2></div>
+      <div class="group" id="homeNew"></div>
+    </div>
+
+    <div id="homeFollowedWrap">
+      <div class="section-head"><h2>Vos suivis</h2><button class="link" data-goto="suivis">Gérer</button></div>
+      <div class="group" id="homeFollowed"></div>
+    </div>
   </section>
 
   <!-- SUIVIS -->
   <section class="view" id="view-suivis">
     <label class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="searchInput" type="search" placeholder="Rechercher un hashtag" autocomplete="off">
+      <input id="searchInput" type="search" placeholder="Rechercher un hashtag" autocomplete="off" enterkeyhint="search">
     </label>
     <div class="group" id="followList"></div>
   </section>
 
   <!-- TENDANCES -->
   <section class="view" id="view-tendances">
-    <div class="group" id="trendingList" style="margin-top:14px"></div>
+    <div class="chips filters" id="catFilters"></div>
+    <div class="group" id="trendingList"></div>
   </section>
 
-  <!-- RECHERCHÉS -->
-  <section class="view" id="view-recherches">
+  <!-- POPULAIRES -->
+  <section class="view" id="view-populaires">
     <div class="group" id="popularList" style="margin-top:14px"></div>
   </section>
 
@@ -329,80 +384,133 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
       Tendances
     </button>
-    <button class="tabbtn" data-tab="recherches">
+    <button class="tabbtn" data-tab="populaires">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
-      Recherchés
+      Populaires
     </button>
   </div>
 </nav>
 
 <div class="backdrop" id="backdrop"></div>
+
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="grabber"></div>
+  <div class="sheet-body" id="sheetBody">
+    <div class="sheet-head">
+      <h2 id="sheetTitle">—</h2>
+      <button class="icon-btn" data-close aria-label="Fermer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-sub" id="sheetSub"></div>
+    <div id="sheetNotice"></div>
+    <div class="stat-grid">
+      <div class="stat"><div class="k">Vues par heure</div><div class="v" id="stVph">—</div></div>
+      <div class="stat"><div class="k">Évolution sur 1 à 3 h</div><div class="v" id="stTrend">—</div></div>
+      <div class="stat"><div class="k">Vidéos dans les classements</div><div class="v" id="stN">—</div></div>
+      <div class="stat"><div class="k">Vues cumulées</div><div class="v" id="stViews">—</div></div>
+    </div>
+    <h3>Vues gagnées par heure</h3>
+    <div class="chart-wrap" id="chartWrap"><canvas id="chartCanvas"></canvas></div>
+    <div id="relatedWrap"><h3>Souvent utilisés avec</h3><div class="related" id="related"></div></div>
+    <div id="videosWrap"><h3>Vidéos qui portent ce hashtag</h3><div id="videos"></div></div>
+    <button class="follow-btn" id="sheetFollow">Suivre ce hashtag</button>
+  </div>
+</div>
+
+<div class="sheet guide" id="guide" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+  <div class="grabber"></div>
   <div class="sheet-head">
-    <h2 id="sheetTitle">—</h2>
-    <button class="icon-btn" id="sheetClose" aria-label="Fermer">
+    <h2 id="guideTitle">Comment lire les chiffres</h2>
+    <button class="icon-btn" data-close aria-label="Fermer">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
   </div>
-  <div class="stat-grid">
-    <div class="stat"><div class="k">Vues</div><div class="v" id="stViews">—</div></div>
-    <div class="stat"><div class="k">Évolution</div><div class="v" id="stPct">—</div></div>
-    <div class="stat"><div class="k">Rang momentum</div><div class="v" id="stRank">—</div></div>
-    <div class="stat"><div class="k">Accélération</div><div class="v" id="stAccel">—</div></div>
-  </div>
-  <div class="chart-wrap"><canvas id="chartCanvas"></canvas></div>
-  <button class="follow-btn" id="sheetFollow">Suivre ce hashtag</button>
+  <dl>
+    <dt>Vues par heure</dt>
+    <dd>Les vues gagnées en une heure par les Shorts qui portent ce hashtag. C'est ce chiffre qui classe les tendances : il montre ce qui accélère maintenant, pas ce qui est déjà gros.</dd>
+    <dt>Statuts</dt>
+    <dd><span class="badge st-boom">Explosion</span>la vitesse a augmenté de 50 % ou plus par rapport à il y a 1 à 3 heures.</dd>
+    <dd><span class="badge st-up">En hausse</span>augmentation de 10 % ou plus.</dd>
+    <dd><span class="badge">Stable</span>variation de moins de 10 %.</dd>
+    <dd><span class="badge">En baisse</span>recul de 10 % ou plus.</dd>
+    <dd><span class="badge st-new">Nouveau</span>entré dans les classements il y a moins de 3 heures.</dd>
+    <dd><span class="badge">Mesure en cours</span>pas encore assez d'historique pour comparer.</dd>
+    <dt>Populaires</dt>
+    <dd>Le total des vues des vidéos qui portent le hashtag. Utile pour repérer les sujets installés.</dd>
+    <dt>D'où viennent les données</dt>
+    <dd id="guideSource">Des classements publics de YouTube en France : le classement général et ceux de plusieurs catégories. Seuls les Shorts de 3 minutes ou moins sont gardés. Les tags qui ne décrivent pas un sujet (#shorts, #viral, #fyp…) sont écartés. Mise à jour toutes les 10 minutes.</dd>
+  </dl>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ---------- Réglages ---------- */
-const DEMO = new URLSearchParams(location.search).has("demo");
 const FOLLOW_KEY = "trendboard_followed_youtube";
-const TABS = ["accueil", "suivis", "tendances", "recherches"];
+const TABS = ["accueil", "suivis", "tendances", "populaires"];
 const PAGE_INFO = {
-  accueil:    ["Accueil", "Tendances YouTube Shorts en France"],
+  accueil:    ["Accueil", "Les hashtags YouTube Shorts qui montent en France"],
   suivis:     ["Suivis", "Touchez l'étoile pour suivre un hashtag"],
-  tendances:  ["Tendances", "Classées par vitesse de montée"],
-  recherches: ["Recherchés", "Classés par nombre de vues"],
+  tendances:  ["Tendances", "Classées par vues gagnées par heure"],
+  populaires: ["Populaires", "Classés par vues cumulées des vidéos"],
 };
+const STATUS = {
+  boom: "Explosion", up: "En hausse", flat: "Stable", down: "En baisse",
+  new: "Nouveau", wait: "Mesure en cours", gone: "Absent",
+};
+const STALE_MINUTES = 40;
+const LIST_STEP = 50;
 
-let items = [];            // hashtags enrichis
-let rankByTag = new Map(); // rang par momentum
+let data = null;          // réponse brute
+let tags = [];            // tous les hashtags enrichis
+let byKey = new Map();
+let rankable = [];        // hashtags classables (actifs, représentatifs)
 let loaded = false;
 let lastStamp = null;
 let currentTab = "accueil";
+let currentCat = "Toutes";
+let listLimit = { trendingList: LIST_STEP, popularList: LIST_STEP, followList: LIST_STEP };
 let chart = null;
-let openTag = null;
-let heroTagShown = null;
-let followed = new Set(loadFollowed());
+let openKey = null;
+let heroShown = null;
+let followed = new Set(readFollowed());
 
 /* ---------- Utilitaires ---------- */
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const nfCompact = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
 const nfFull = new Intl.NumberFormat("fr-FR");
 const compact = (n) => nfCompact.format(Math.round(n || 0));
-const label = (t) => String(t).replace(/_/g, " ");
-const pctText = (p) => (p >= 0 ? "+" : "−") + Math.abs(p).toFixed(Math.abs(p) >= 100 ? 0 : 1).replace(".", ",") + " %";
+const plural = (n, word) => `${n} ${word}${n > 1 ? "s" : ""}`;
+const minutesSince = (iso) => (Date.now() - new Date(iso).getTime()) / 60000;
 
-function loadFollowed() {
+function ago(iso) {
+  const m = minutesSince(iso);
+  if (!isFinite(m)) return "";
+  if (m < 2) return "à l'instant";
+  if (m < 60) return `il y a ${Math.round(m)} min`;
+  if (m < 60 * 24) return `il y a ${Math.round(m / 60)} h`;
+  return `il y a ${Math.round(m / 1440)} j`;
+}
+function agoShort(iso) {
+  const m = minutesSince(iso);
+  if (!isFinite(m)) return "—";
+  if (m < 60) return `${Math.max(1, Math.round(m))} min`;
+  if (m < 60 * 24) return `${Math.round(m / 60)} h`;
+  return `${Math.round(m / 1440)} j`;
+}
+function trendText(tr) {
+  if (tr === null || tr === undefined) return "—";
+  const p = tr * 100;
+  return (p >= 0 ? "+" : "−") + Math.abs(p).toFixed(Math.abs(p) >= 100 ? 0 : 1).replace(".", ",") + " %";
+}
+function readFollowed() {
   try { return JSON.parse(localStorage.getItem(FOLLOW_KEY) || "[]"); } catch (e) { return []; }
 }
 function saveFollowed() {
   try { localStorage.setItem(FOLLOW_KEY, JSON.stringify([...followed])); } catch (e) {}
 }
-
-function enrich(h) {
-  const vals = (h.history || []).map((p) => Number(p.v) || 0);
-  const first = vals[0] || 0;
-  const last = vals.length ? vals[vals.length - 1] : Number(h.latest_count) || 0;
-  const pct = first > 0 ? ((last - first) / first) * 100 : 0;
-  return { ...h, vals, pct, latest_count: Number(h.latest_count) || last };
-}
-
 function sparkPath(vals, w, h, pad = 3) {
   if (!vals || vals.length < 2) return "";
   const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
@@ -412,171 +520,241 @@ function sparkPath(vals, w, h, pad = 3) {
     return `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
 }
+function dataUrl() {
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+  const repo = location.pathname.split("/").filter(Boolean)[0];
+  return m && repo ? `https://raw.githubusercontent.com/${m[1]}/${repo}/data/data.json` : "./data.json";
+}
 
-/* ---------- Données de démonstration ---------- */
-function demoData() {
-  const now = Date.now();
-  const specs = [
-    ["shorts", 520000, 1.9], ["humour", 310000, 1.35], ["football", 280000, 1.6],
-    ["recettefacile", 90000, 2.4], ["minecraft", 400000, 1.05], ["asmr", 150000, 0.92],
-    ["astuce", 60000, 1.8], ["gaming", 350000, 1.15], ["voyage", 45000, 1.3], ["motivation", 70000, 0.86],
-  ];
-  return specs.map(([tag, base, factor], k) => {
-    const n = 24, history = [];
-    for (let i = 0; i < n; i++) {
-      const t = i / (n - 1);
-      const wobble = 1 + Math.sin(i * 1.7 + k) * 0.015;
-      history.push({ t: new Date(now - (n - 1 - i) * 600000).toISOString(), v: Math.round(base * (1 + (factor - 1) * t * t) * wobble) });
-    }
-    const v = history.map((p) => p.v);
-    const d = v.slice(1).map((x, i) => x - v[i]);
-    const growth = d.reduce((a, b) => a + b, 0) / d.length;
-    const a = d.slice(1).map((x, i) => x - d[i]);
-    const accel = a.reduce((x, y) => x + y, 0) / a.length;
-    return { platform: "youtube", tag, latest_count: v[n - 1], growth, accel, score: growth + accel * 3, history };
+/* ---------- Préparation des données ---------- */
+function prepare(json) {
+  const list = (json && json.version === 2 && Array.isArray(json.tags)) ? json.tags : [];
+  const firstTimes = list.map((t) => new Date(t.first_seen).getTime()).filter(isFinite);
+  const origin = firstTimes.length ? Math.min(...firstTimes) : Date.now();
+  tags = list.map((t) => {
+    const series = (t.series || []).map((p) => Number(p[1]) || 0);
+    let status;
+    const firstMs = new Date(t.first_seen).getTime();
+    const isNew = t.active && minutesSince(t.first_seen) < 180 && firstMs - origin > 30 * 60000;
+    if (!t.active) status = "gone";
+    else if (isNew) status = "new";
+    else if (t.trend === null || t.trend === undefined) status = "wait";
+    else if (t.trend >= 0.5) status = "boom";
+    else if (t.trend >= 0.1) status = "up";
+    else if (t.trend > -0.1) status = "flat";
+    else status = "down";
+    return { ...t, series, status };
   });
+  byKey = new Map(tags.map((t) => [t.key, t]));
+  const leaders = tags.filter((t) => t.active && t.group === t.key);
+  const minN = leaders.filter((t) => t.n >= 2).length >= 5 ? 2 : 1;
+  rankable = leaders.filter((t) => t.n >= minN);
 }
 
 /* ---------- Rendu ---------- */
+const PLAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="#ff0033"/></svg>';
 function emptyHtml(title, text, action) {
-  return `<div class="empty">
-    <div class="empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="#ff0033"/></svg></div>
+  return `<div class="empty"><div class="empty-icon">${PLAY_ICON}</div>
     <h3>${title}</h3><p>${text}</p>
-    ${action ? `<button class="link" data-goto="${action[0]}">${action[1]}</button>` : ""}
-  </div>`;
+    ${action ? `<button class="link" data-goto="${action[0]}">${action[1]}</button>` : ""}</div>`;
 }
 const NO_DATA = () => emptyHtml("Les tendances arrivent", "Les données sont mises à jour toutes les 10 minutes et s'afficheront ici automatiquement.");
+const MEASURING = () => emptyHtml("Mesure en cours", "La vitesse de chaque hashtag apparaît après deux collectes, soit une vingtaine de minutes.");
 
-function rowHtml(h, i, mode, maxViews) {
-  const up = h.pct >= 0;
-  const idx = Math.min(i, 14);
-  const rank = rankByTag.get(h.tag);
-  const left = mode === "follow" ? "" : `<div class="rank ${i < 3 ? "top" : ""}">${i + 1}</div>`;
-  let right = `<span class="pill ${up ? "up" : "down"}">${pctText(h.pct)}</span>`;
-  if (mode === "score") {
-    right = `<svg class="spark-mini" viewBox="0 0 56 24" aria-hidden="true"><path d="${sparkPath(h.vals, 56, 24)}" stroke="${up ? "#ff0033" : "var(--muted)"}"/></svg>` + right;
+function metaText(t) {
+  if (!t.active) return `Absent des classements ${ago(t.last_seen)}`;
+  return plural(t.n, "vidéo") + (t.cat ? `, ${t.cat}` : "");
+}
+function statusSmall(t) {
+  return `<small class="st-${t.status}">${t.status === "boom" || t.status === "up" ? "▲ " : t.status === "down" ? "▼ " : ""}${STATUS[t.status]}</small>`;
+}
+function rowHtml(t, i, mode, maxViews, noRank) {
+  const rank = mode === "follow" || noRank ? "" : `<div class="rank ${i < 3 ? "top" : ""}">${i + 1}</div>`;
+  let right = "", bar = "";
+  if (mode === "trend") {
+    const path = sparkPath(t.series, 52, 24);
+    right = (path ? `<svg class="spark-mini" viewBox="0 0 52 24" aria-hidden="true"><path d="${path}" stroke="${t.status === "down" ? "var(--muted)" : "#ff0033"}"/></svg>` : "")
+      + `<div class="val"><b>${compact(t.vph)}/h</b>${statusSmall(t)}</div>`;
+  } else if (mode === "popular") {
+    right = `<div class="val"><b>${compact(t.views)}</b><small>vues</small></div>`;
+    bar = maxViews ? `<div class="bar"><span style="width:${Math.max(3, (t.views / maxViews) * 100).toFixed(1)}%"></span></div>` : "";
+  } else {
+    const on = followed.has(t.key);
+    right = `<div class="val">${t.active && t.vph ? `<b>${compact(t.vph)}/h</b>` : ""}${statusSmall(t)}</div>
+      <button class="star ${on ? "on" : ""}" data-star="${esc(t.key)}" aria-label="${on ? "Ne plus suivre" : "Suivre"} #${esc(t.label)}">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg>
+      </button>`;
   }
-  if (mode === "follow") {
-    const on = followed.has(h.tag);
-    right = `<button class="star ${on ? "on" : ""}" data-star="${esc(h.tag)}" aria-label="${on ? "Ne plus suivre" : "Suivre"} ${esc(label(h.tag))}">
-      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg>
-    </button>`;
-  }
-  const bar = mode === "volume" && maxViews
-    ? `<div class="bar"><span style="width:${Math.max(4, (h.latest_count / maxViews) * 100).toFixed(1)}%"></span></div>` : "";
-  const meta = mode === "follow" && rank ? `${compact(h.latest_count)} vues, rang ${rank}` : `${compact(h.latest_count)} vues`;
-  return `<div class="row" data-open="${esc(h.tag)}" role="button" tabindex="0" style="--i:${idx}">
-    ${left}
-    <div class="info"><div class="tag">#${esc(label(h.tag))}</div><div class="meta">${meta}</div>${bar}</div>
+  return `<div class="row ${t.active ? "" : "dim"}" data-open="${esc(t.key)}" role="button" tabindex="0" style="--i:${Math.min(i, 14)}">
+    ${rank}
+    <div class="info"><div class="tag">#${esc(t.label)}</div><div class="meta">${esc(metaText(t))}</div>${bar}</div>
     ${right}
   </div>`;
 }
-
-function renderHero(byScore) {
-  const hero = $("hero");
-  if (!byScore.length) {
-    $("heroTag").textContent = loaded ? "Bientôt" : "…";
-    $("heroViews").textContent = "—";
-    $("heroPct").textContent = "—";
-    $("heroRank").textContent = "";
-    $("heroSpark").innerHTML = "";
-    hero.style.cursor = "default";
-    return;
-  }
-  const top = byScore[0];
-  hero.style.cursor = "pointer";
-  hero.dataset.open = top.tag;
-  $("heroTag").textContent = "#" + label(top.tag);
-  $("heroRank").textContent = "N°1";
-  $("heroPct").textContent = pctText(top.pct);
-
-  const changed = heroTagShown !== top.tag;
-  heroTagShown = top.tag;
-  if (changed) countUp($("heroViews"), top.latest_count); else $("heroViews").textContent = compact(top.latest_count);
-
-  const line = sparkPath(top.vals, 300, 76, 8);
-  const svg = $("heroSpark");
-  svg.innerHTML = line ? `<path class="area" d="${line} L300,76 L0,76 Z"/><path class="line" d="${line}"/>` : "";
-  if (line && changed) {
-    const path = svg.querySelector(".line");
-    svg.style.setProperty("--len", path.getTotalLength().toFixed(0));
-    svg.classList.remove("draw"); void svg.offsetWidth; svg.classList.add("draw");
-  }
+function listHtml(id, list, mode, maxViews) {
+  const limit = listLimit[id] || list.length;
+  const shown = list.slice(0, limit).map((t, i) => rowHtml(t, i, mode, maxViews)).join("");
+  const rest = list.length - limit;
+  return shown + (rest > 0 ? `<button class="more" data-more="${id}">Afficher ${Math.min(rest, LIST_STEP)} de plus (${rest} restants)</button>` : "");
 }
 
+function byVph(a, b) { return b.vph - a.vph || b.views - a.views; }
+
+function renderHero() {
+  const hero = $("hero");
+  const top = [...rankable].filter((t) => t.vph > 0).sort(byVph)[0];
+  if (!top) {
+    hero.classList.remove("clickable");
+    delete hero.dataset.open;
+    $("heroBadge").innerHTML = "";
+    $("heroTag").textContent = loaded ? (tags.length ? "Mesure en cours" : "Bientôt") : "…";
+    $("heroBody").innerHTML = loaded
+      ? `<p class="hero-msg">${tags.length ? "Les premières vitesses apparaissent après deux collectes, soit une vingtaine de minutes." : "Les données arrivent. Elles sont mises à jour toutes les 10 minutes."}</p>`
+      : "";
+    heroShown = null;
+    return;
+  }
+  hero.classList.add("clickable");
+  hero.dataset.open = top.key;
+  $("heroBadge").innerHTML = `<span class="badge">${STATUS[top.status]}</span>`;
+  $("heroTag").textContent = "#" + top.label;
+  const changed = heroShown !== top.key;
+  heroShown = top.key;
+  $("heroBody").innerHTML = `
+    <div class="hero-stats">
+      <div><div class="k">Vues par heure</div><div class="v" id="heroVph">${compact(top.vph)}</div></div>
+      <div><div class="k">Vidéos</div><div class="v">${top.n}</div></div>
+      ${top.trend === null || top.trend === undefined
+        ? `<div><div class="k">Repéré il y a</div><div class="v">${agoShort(top.first_seen)}</div></div>`
+        : `<div><div class="k">Évolution</div><div class="v">${trendText(top.trend)}</div></div>`}
+    </div>
+    <svg class="hero-spark" id="heroSpark" viewBox="0 0 300 70" preserveAspectRatio="none" aria-hidden="true"></svg>`;
+  const line = sparkPath(top.series, 300, 70, 8);
+  const svg = $("heroSpark");
+  if (line) {
+    svg.innerHTML = `<path class="area" d="${line} L300,70 L0,70 Z"/><path class="line" d="${line}"/>`;
+    if (changed) {
+      svg.style.setProperty("--len", svg.querySelector(".line").getTotalLength().toFixed(0));
+      svg.classList.add("draw");
+    }
+  } else {
+    svg.style.height = "18px";
+  }
+  if (changed) countUp($("heroVph"), top.vph);
+}
 function countUp(el, target) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = compact(target); return; }
   const start = performance.now(), dur = 900;
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce) { el.textContent = compact(target); return; }
   (function tick(now) {
     const t = Math.min(1, (now - start) / dur);
-    const eased = 1 - Math.pow(1 - t, 3);
-    el.textContent = compact(target * eased);
+    el.textContent = compact(target * (1 - Math.pow(1 - t, 3)));
     if (t < 1) requestAnimationFrame(tick);
   })(start);
 }
 
-function renderChips(byScore) {
-  if (!byScore.length) { $("chips").innerHTML = ""; return; }
-  const rising = byScore.filter((h) => h.pct > 0).length;
+function renderChips() {
+  if (!data || !tags.length) { $("chips").innerHTML = ""; return; }
+  const active = tags.filter((t) => t.active).length;
+  const booming = rankable.filter((t) => t.status === "boom").length;
   $("chips").innerHTML = `
-    <span class="chip"><b>${byScore.length}</b> hashtags suivis par l'outil</span>
-    <span class="chip"><b>${rising}</b> en hausse</span>
-    <span class="chip"><b>${followed.size}</b> dans vos suivis</span>`;
+    <span class="chip"><b>${nfFull.format(data.shorts_analyzed || 0)}</b> Shorts analysés</span>
+    <span class="chip"><b>${nfFull.format(active)}</b> hashtags actifs</span>
+    ${booming ? `<span class="chip"><b>${booming}</b> en explosion</span>` : ""}`;
 }
 
-function renderHomeFollowed() {
-  const list = items.filter((h) => followed.has(h.tag)).sort((a, b) => b.score - a.score);
-  if (!items.length) { $("homeFollowed").innerHTML = NO_DATA(); return; }
-  $("homeFollowed").innerHTML = list.length
-    ? list.slice(0, 5).map((h, i) => rowHtml(h, i, "score")).join("")
-    : emptyHtml("Aucun hashtag suivi", "Suivez les hashtags de votre niche pour les retrouver ici en un coup d'œil.", ["suivis", "Choisir des hashtags"]);
+function renderHome() {
+  const followedList = tags.filter((t) => followed.has(t.key)).sort((a, b) => (b.active - a.active) || byVph(a, b));
+  $("homeFollowedWrap").hidden = !loaded || !tags.length;
+  $("homeFollowed").innerHTML = followedList.length
+    ? followedList.slice(0, 5).map((t, i) => rowHtml(t, i, "trend", 0, true)).join("")
+    : `<button class="cta-row" data-goto="suivis">
+        <span class="cta-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg></span>
+        <span class="info"><span class="tag">Choisir mes hashtags</span><span class="meta">Retrouvez ceux de votre niche ici</span></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>`;
+
+  const rising = rankable.filter((t) => t.vph > 0).sort(byVph);
+  $("homeTrending").innerHTML = !tags.length ? NO_DATA() : rising.length ? rising.slice(0, 5).map((t, i) => rowHtml(t, i, "trend")).join("") : MEASURING();
+
+  const fresh = rankable.filter((t) => t.status === "new").sort(byVph).slice(0, 5);
+  $("homeNewWrap").hidden = !fresh.length;
+  $("homeNew").innerHTML = fresh.map((t, i) => rowHtml(t, i, "trend", 0, true)).join("");
 }
 
+function renderFilters() {
+  const counts = new Map();
+  rankable.forEach((t) => { if (t.cat && t.vph > 0) counts.set(t.cat, (counts.get(t.cat) || 0) + 1); });
+  const cats = [...counts.entries()].sort((a, b) => b[1] - a[1]).map((c) => c[0]);
+  if (currentCat !== "Toutes" && !cats.includes(currentCat)) currentCat = "Toutes";
+  $("catFilters").innerHTML = cats.length < 2 ? "" : ["Toutes", ...cats]
+    .map((c) => `<button class="chip ${c === currentCat ? "on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("");
+}
+function renderTrending(noAnim) {
+  const el = $("trendingList");
+  el.classList.toggle("no-anim", !!noAnim);
+  const list = rankable.filter((t) => t.vph > 0 && (currentCat === "Toutes" || t.cat === currentCat)).sort(byVph);
+  el.innerHTML = !tags.length ? NO_DATA() : list.length ? listHtml("trendingList", list, "trend") : MEASURING();
+}
+function renderPopular(noAnim) {
+  const el = $("popularList");
+  el.classList.toggle("no-anim", !!noAnim);
+  const list = [...rankable].sort((a, b) => b.views - a.views);
+  el.innerHTML = list.length ? listHtml("popularList", list, "popular", list[0].views) : NO_DATA();
+}
 function renderFollowList(noAnim) {
-  const q = $("searchInput").value.trim().toLowerCase().replace(/^#/, "");
   const el = $("followList");
   el.classList.toggle("no-anim", !!noAnim);
-  if (!items.length) { el.innerHTML = NO_DATA(); return; }
-  const list = [...items]
-    .filter((h) => !q || label(h.tag).toLowerCase().includes(q))
-    .sort((a, b) => (followed.has(b.tag) - followed.has(a.tag)) || b.latest_count - a.latest_count);
+  if (!tags.length) { el.innerHTML = NO_DATA(); return; }
+  const q = $("searchInput").value.trim().toLowerCase().replace(/^#/, "");
+  const qn = q.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[\W_]+/g, "");
+  const list = tags
+    .filter((t) => !qn || t.key.includes(qn) || t.label.toLowerCase().includes(q))
+    .sort((a, b) => (followed.has(b.key) - followed.has(a.key)) || (b.active - a.active) || byVph(a, b));
   el.innerHTML = list.length
-    ? list.map((h, i) => rowHtml(h, i, "follow")).join("")
-    : emptyHtml("Aucun résultat", `Aucun hashtag ne correspond à « ${esc(q)} » pour le moment.`);
+    ? listHtml("followList", list, "follow")
+    : emptyHtml("Aucun résultat", `Aucun hashtag ne correspond à « ${esc(q)} » dans les classements actuels.`);
+  $("searchInput").placeholder = `Rechercher parmi ${nfFull.format(tags.length)} hashtags`;
 }
 
 function renderAll() {
-  const byScore = [...items].sort((a, b) => b.score - a.score);
-  const byVolume = [...items].sort((a, b) => b.latest_count - a.latest_count);
-  rankByTag = new Map(byScore.map((h, i) => [h.tag, i + 1]));
-  const maxViews = byVolume.length ? byVolume[0].latest_count : 0;
-
-  renderHero(byScore);
-  renderChips(byScore);
-  renderHomeFollowed();
-  renderFollowList(false);
-
-  if (!items.length) {
-    ["homeTrending", "trendingList", "popularList"].forEach((id) => { $(id).innerHTML = NO_DATA(); });
-  } else {
-    $("homeTrending").innerHTML = byScore.slice(0, 5).map((h, i) => rowHtml(h, i, "score")).join("");
-    $("trendingList").innerHTML = byScore.map((h, i) => rowHtml(h, i, "score")).join("");
-    $("popularList").innerHTML = byVolume.map((h, i) => rowHtml(h, i, "volume", maxViews)).join("");
-  }
+  renderHero();
+  renderChips();
+  renderHome();
+  renderFilters();
+  renderTrending();
+  renderPopular();
+  renderFollowList();
+  if (openKey && byKey.has(openKey)) fillSheet(byKey.get(openKey), false);
 }
-
 function renderSkeletons() {
   const sk = '<div class="skeleton"></div>'.repeat(4);
   ["homeFollowed", "homeTrending", "followList", "trendingList", "popularList"].forEach((id) => { $(id).innerHTML = sk; });
 }
 
-/* ---------- Navigation entre onglets ---------- */
-function switchTab(tab, fromHash) {
+/* ---------- Fraîcheur ---------- */
+function renderFreshness() {
+  const live = $("live");
+  live.classList.remove("stale", "off");
+  if (!data || !data.generated_at) {
+    live.classList.add("off");
+    $("updatedTop").textContent = loaded ? "En attente" : "Chargement…";
+    return;
+  }
+  const m = minutesSince(data.generated_at);
+  if (m > STALE_MINUTES) {
+    live.classList.add("stale");
+    $("updatedTop").textContent = "Données en retard";
+  } else {
+    $("updatedTop").textContent = "Mis à jour " + ago(data.generated_at);
+  }
+  $("footnote").innerHTML = `${nfFull.format(data.videos_analyzed || 0)} vidéos des classements YouTube France analysées, dernière collecte ${ago(data.generated_at)}.<br><button data-guide>Comment lire les chiffres</button>`;
+}
+
+/* ---------- Navigation ---------- */
+function switchTab(tab, fromHistory) {
   if (!TABS.includes(tab)) tab = "accueil";
   if (tab === currentTab) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   const dir = TABS.indexOf(tab) > TABS.indexOf(currentTab) ? "right" : "left";
-
   const oldView = $("view-" + currentTab), newView = $("view-" + tab);
   oldView.classList.remove("active", "enter-left", "enter-right");
   newView.classList.remove("enter-left", "enter-right");
@@ -599,124 +777,195 @@ function switchTab(tab, fromHash) {
 
   currentTab = tab;
   window.scrollTo({ top: 0 });
-  if (!fromHash && location.hash !== "#" + tab) history.pushState(null, "", "#" + tab);
+  if (!fromHistory && location.hash !== "#" + tab) history.pushState(null, "", "#" + tab);
 }
-window.addEventListener("popstate", () => switchTab(location.hash.slice(1) || "accueil", true));
+window.addEventListener("popstate", () => { closeSheets(); switchTab(location.hash.slice(1) || "accueil", true); });
 
 /* ---------- Suivis ---------- */
-function toggleFollow(tag) {
-  const on = !followed.has(tag);
-  on ? followed.add(tag) : followed.delete(tag);
+function toggleFollow(key) {
+  const t = byKey.get(key);
+  const name = "#" + (t ? t.label : key);
+  const on = !followed.has(key);
+  on ? followed.add(key) : followed.delete(key);
   saveFollowed();
   document.querySelectorAll("[data-star]").forEach((b) => {
-    if (b.dataset.star !== tag) return;
+    if (b.dataset.star !== key) return;
     b.classList.toggle("on", on);
     b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
-    b.setAttribute("aria-label", (on ? "Ne plus suivre " : "Suivre ") + label(tag));
+    b.setAttribute("aria-label", (on ? "Ne plus suivre " : "Suivre ") + name);
   });
-  renderHomeFollowed();
-  renderChips([...items].sort((a, b) => b.score - a.score));
-  if (openTag === tag) updateFollowBtn();
-  toast(on ? `#${label(tag)} ajouté à vos suivis` : `#${label(tag)} retiré de vos suivis`);
+  renderHome();
+  if (openKey === key) updateFollowBtn();
+  toast(on ? `${name} ajouté à vos suivis` : `${name} retiré de vos suivis`);
 }
-
 let toastTimer = null;
 function toast(msg) {
-  const t = $("toast");
-  t.textContent = msg;
-  t.classList.add("show");
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
-/* ---------- Fiche détail ---------- */
-function openSheet(tag) {
-  const h = items.find((x) => x.tag === tag);
-  if (!h) return;
-  openTag = tag;
-  $("sheetTitle").textContent = "#" + label(tag);
-  $("stViews").textContent = nfFull.format(h.latest_count);
-  $("stPct").textContent = pctText(h.pct);
-  $("stPct").classList.toggle("red", h.pct >= 0);
-  $("stRank").textContent = rankByTag.has(tag) ? `${rankByTag.get(tag)} sur ${items.length}` : "—";
-  $("stAccel").textContent = (h.accel >= 0 ? "+" : "−") + compact(Math.abs(h.accel || 0));
-  updateFollowBtn();
-
+/* ---------- Feuilles ---------- */
+function openPanel(id) {
   $("backdrop").classList.add("open");
-  $("sheet").classList.add("open");
+  $(id).classList.add("open");
   document.body.style.overflow = "hidden";
-  setTimeout(() => drawChart(h), 120);
 }
-function closeSheet() {
+function closeSheets() {
   $("backdrop").classList.remove("open");
   $("sheet").classList.remove("open");
+  $("guide").classList.remove("open");
   document.body.style.overflow = "";
-  openTag = null;
+  openKey = null;
+}
+function openSheet(key) {
+  const t = byKey.get(key);
+  if (!t) return;
+  const already = $("sheet").classList.contains("open");
+  fillSheet(t, already);
+  if (!already) openPanel("sheet");
+  $("sheet").scrollTop = 0;
+}
+function fillSheet(t, animate) {
+  openKey = t.key;
+  const body = $("sheetBody");
+  if (animate) { body.classList.remove("swap"); void body.offsetWidth; body.classList.add("swap"); }
+
+  $("sheetTitle").textContent = "#" + t.label;
+  const statusBadge = `<span class="badge st-${t.status}">${STATUS[t.status]}</span>`;
+  $("sheetSub").innerHTML = statusBadge + (t.cat ? `<span>${esc(t.cat)}</span>` : "") + `<span>Repéré ${esc(ago(t.first_seen))}</span>`;
+  $("sheetNotice").innerHTML = t.active ? "" : `<p class="notice">Ce hashtag n'apparaît plus dans les classements YouTube depuis ${esc(ago(t.last_seen).replace("il y a ", ""))}. Ses derniers chiffres connus sont affichés.</p>`;
+  $("stVph").textContent = t.active ? nfFull.format(t.vph) : "—";
+  $("stTrend").textContent = t.trend === null || t.trend === undefined ? (t.active ? "Trop récent" : "—") : trendText(t.trend);
+  $("stTrend").classList.toggle("red", (t.trend || 0) > 0);
+  $("stN").textContent = t.active ? t.n : "0";
+  $("stViews").textContent = compact(t.views);
+
+  const related = (t.related || []).map((k) => byKey.get(k)).filter(Boolean);
+  $("relatedWrap").hidden = !related.length;
+  $("related").innerHTML = related.map((r) => `<button class="chip" data-open="${esc(r.key)}">#${esc(r.label)}</button>`).join("");
+
+  const vids = (t.videos || []).filter((v) => /^[\w-]{6,20}$/.test(v.id));
+  $("videosWrap").hidden = !vids.length;
+  $("videos").innerHTML = vids.map((v) => `
+    <a class="video" href="https://www.youtube.com/shorts/${v.id}" target="_blank" rel="noopener">
+      <img class="thumb" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div><div class="t">${esc(v.title)}</div><div class="c">${esc(v.ch)}, ${compact(v.views)} vues${v.vph ? `, +${compact(v.vph)}/h` : ""}</div></div>
+    </a>`).join("");
+
+  updateFollowBtn();
+  setTimeout(() => drawChart(t), animate ? 0 : 120);
 }
 function updateFollowBtn() {
-  const on = followed.has(openTag);
+  const on = followed.has(openKey);
   const btn = $("sheetFollow");
   btn.textContent = on ? "Ne plus suivre" : "Suivre ce hashtag";
   btn.classList.toggle("on", on);
 }
-function drawChart(h) {
-  if (typeof Chart === "undefined") return;
-  const canvas = $("chartCanvas");
-  const ctx = canvas.getContext("2d");
+function drawChart(t) {
+  const wrap = $("chartWrap");
+  if (chart) { chart.destroy(); chart = null; }
+  const points = t.series || [];
+  if (points.length < 2) {
+    wrap.innerHTML = '<div class="chart-empty">La courbe apparaîtra après quelques collectes.</div>';
+    return;
+  }
+  if (typeof Chart === "undefined") { wrap.innerHTML = svgChart(t); return; }
+  wrap.innerHTML = '<canvas id="chartCanvas"></canvas>';
+  const ctx = $("chartCanvas").getContext("2d");
   const muted = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#a3a3a3";
-  const grad = ctx.createLinearGradient(0, 0, 0, 200);
+  const grad = ctx.createLinearGradient(0, 0, 0, 190);
   grad.addColorStop(0, "rgba(255,0,51,0.35)");
   grad.addColorStop(1, "rgba(255,0,51,0)");
-  const labels = (h.history || []).map((p) => {
-    const d = new Date(p.t);
-    return isNaN(d) ? "" : d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  });
-  if (chart) chart.destroy();
+  const raw = (data.tags.find((x) => x.key === t.key) || {}).series || [];
+  const labels = raw.map((p) => new Date(p[0]).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
   chart = new Chart(ctx, {
     type: "line",
-    data: { labels, datasets: [{ data: h.vals, borderColor: "#ff0033", backgroundColor: grad, fill: true, tension: 0.35, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }] },
+    data: { labels, datasets: [{ data: points, borderColor: "#ff0033", backgroundColor: grad, fill: true, tension: 0.35, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       animation: { duration: 900, easing: "easeOutQuart" },
       interaction: { mode: "index", intersect: false },
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => nfFull.format(c.parsed.y) + " vues" } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => nfFull.format(c.parsed.y) + " vues/h" } } },
       scales: {
         x: { ticks: { color: muted, maxRotation: 0, autoSkip: true, maxTicksLimit: 4 }, grid: { display: false } },
-        y: { ticks: { color: muted, callback: (v) => compact(v) }, grid: { color: "rgba(128,128,128,0.15)" } },
+        y: { beginAtZero: true, ticks: { color: muted, callback: (v) => compact(v) }, grid: { color: "rgba(128,128,128,0.15)" } },
       },
     },
   });
+}
+
+function svgChart(t) {
+  const raw = (data.tags.find((x) => x.key === t.key) || {}).series || [];
+  const vals = t.series, max = Math.max(...vals, 1);
+  const w = 320, h = 170, top = 14, bottom = 22;
+  const pts = vals.map((v, i) => [(i / (vals.length - 1)) * w, top + (1 - v / max) * (h - top - bottom)]);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const time = (i) => raw[i] ? new Date(raw[i][0]).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none" role="img" aria-label="Vues gagnées par heure">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff0033" stop-opacity=".35"/><stop offset="1" stop-color="#ff0033" stop-opacity="0"/></linearGradient></defs>
+    <path d="${line} L${w},${h - bottom} L0,${h - bottom} Z" fill="url(#g)"/>
+    <path d="${line}" fill="none" stroke="#ff0033" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <text x="0" y="10" font-size="11" fill="var(--muted)">max ${compact(max)}/h</text>
+    <text x="0" y="${h - 4}" font-size="11" fill="var(--muted)">${time(0)}</text>
+    <text x="${w}" y="${h - 4}" font-size="11" fill="var(--muted)" text-anchor="end">${time(raw.length - 1)}</text>
+  </svg>`;
 }
 
 /* ---------- Événements ---------- */
 document.addEventListener("click", (e) => {
   const star = e.target.closest("[data-star]");
   if (star) { e.stopPropagation(); toggleFollow(star.dataset.star); return; }
+  if (e.target.closest("[data-close]")) { closeSheets(); return; }
+  if (e.target.closest("[data-guide]")) { closeSheets(); openPanel("guide"); return; }
+  const more = e.target.closest("[data-more]");
+  if (more) {
+    const id = more.dataset.more;
+    listLimit[id] += LIST_STEP;
+    ({ trendingList: renderTrending, popularList: renderPopular, followList: renderFollowList })[id](true);
+    return;
+  }
+  const cat = e.target.closest("[data-cat]");
+  if (cat) {
+    currentCat = cat.dataset.cat;
+    listLimit.trendingList = LIST_STEP;
+    renderFilters();
+    renderTrending();
+    return;
+  }
   const go = e.target.closest("[data-goto]");
-  if (go) { switchTab(go.dataset.goto); return; }
+  if (go) { closeSheets(); switchTab(go.dataset.goto); return; }
   const tabBtn = e.target.closest(".tabbtn");
   if (tabBtn) { switchTab(tabBtn.dataset.tab); return; }
   const open = e.target.closest("[data-open]");
   if (open && open.dataset.open) openSheet(open.dataset.open);
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeSheet();
-  if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-open]")) { e.preventDefault(); openSheet(e.target.dataset.open); }
+  if (e.key === "Escape") closeSheets();
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-open]") && e.target.tagName !== "BUTTON") {
+    e.preventDefault();
+    openSheet(e.target.dataset.open);
+  }
 });
-$("backdrop").addEventListener("click", closeSheet);
-$("sheetClose").addEventListener("click", closeSheet);
-$("sheetFollow").addEventListener("click", () => openTag && toggleFollow(openTag));
-$("searchInput").addEventListener("input", () => renderFollowList(true));
+$("backdrop").addEventListener("click", closeSheets);
+$("guideBtn").addEventListener("click", () => openPanel("guide"));
+$("sheetFollow").addEventListener("click", () => openKey && toggleFollow(openKey));
+let searchTimer = null;
+$("searchInput").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { listLimit.followList = LIST_STEP; renderFollowList(true); }, 120);
+});
 
 /* ---------- Chargement ---------- */
 async function loadData() {
   let json = null;
-  if (DEMO) {
-    if (loaded) return;
-    json = { generated_at: new Date().toISOString(), hashtags: demoData() };
+  if (window.TB_DATA) {
+    json = window.TB_DATA;
   } else {
     try {
-      const res = await fetch("./data.json?t=" + Date.now(), { cache: "no-store" });
+      const res = await fetch(dataUrl() + "?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       json = await res.json();
     } catch (e) {
@@ -724,24 +973,22 @@ async function loadData() {
     }
   }
   const stamp = json && json.generated_at;
-  if (loaded && stamp === lastStamp) return; // rien de neuf : on ne rejoue pas les animations
+  if (loaded && stamp === lastStamp) { renderFreshness(); return; }
   lastStamp = stamp;
-  items = json ? (json.hashtags || []).filter((h) => !h.platform || h.platform === "youtube").map(enrich) : [];
+  data = json && json.version === 2 ? json : null;
+  prepare(data);
   loaded = true;
-
-  const when = stamp ? new Date(stamp) : null;
-  const hhmm = when && !isNaN(when) ? when.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : null;
-  $("updatedTop").textContent = hhmm ? "Mis à jour à " + hhmm : "En attente";
-  $("footnote").textContent = items.length ? "Actualisation automatique toutes les 10 minutes" : "";
+  renderFreshness();
   renderAll();
 }
 
-if (DEMO) document.body.classList.add("demo");
 renderSkeletons();
 const startTab = location.hash.slice(1);
 if (TABS.includes(startTab) && startTab !== "accueil") switchTab(startTab, true);
 loadData();
-setInterval(loadData, 60000);
+setInterval(() => { if (!document.hidden) loadData(); }, 5 * 60000);
+setInterval(renderFreshness, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadData(); });
 </script>
 </body>
 </html>
