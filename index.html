@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TrendBoard : les tendances YouTube Shorts en direct</title>
 <meta name="description" content="Les hashtags YouTube Shorts qui montent en France, mesurés en vues gagnées par heure et mis à jour toutes les 10 minutes.">
-<meta name="theme-color" content="#0f0f0f">
+<meta name="theme-color" content="#0d0e13">
 <link rel="canonical" href="https://bobaze-tech.github.io/Trend-Watcher/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TrendBoard">
@@ -28,25 +28,27 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 <style>
 :root {
-  --red: #ff0033;
-  --red-soft: rgba(255, 0, 51, 0.14);
-  --bg: #0f0f0f;
-  --panel: #1a1a1a;
-  --panel2: #272727;
-  --border: #303030;
-  --text: #f1f1f1;
-  --muted: #a3a3a3;
-  --bar-bg: rgba(15, 15, 15, 0.86);
+  --accent: #8b7bff;
+  --accent-soft: rgba(139, 123, 255, 0.16);
+  --bg: #0d0e13;
+  --panel: #16171e;
+  --panel2: #22232d;
+  --border: #2a2b36;
+  --text: #eeeef3;
+  --muted: #9a9bab;
+  --bar-bg: rgba(13, 14, 19, 0.86);
   --ease: cubic-bezier(.22, 1, .36, 1);
+  --rel-high: #22c55e; --rel-mid: #f59e0b; --rel-low: #ef4444;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #ffffff; --panel: #f5f5f5; --panel2: #e9e9e9; --border: #e0e0e0;
-    --text: #0f0f0f; --muted: #5f5f5f; --red-soft: rgba(255, 0, 51, 0.10);
-    --bar-bg: rgba(255, 255, 255, 0.88);
+    --bg: #fbfbfd; --panel: #f2f2f7; --panel2: #e6e6ef; --border: #e1e1ea;
+    --text: #15151c; --muted: #62637a; --accent: #5b45e0; --accent-soft: rgba(91, 69, 224, 0.10);
+    --bar-bg: rgba(251, 251, 253, 0.88);
+    --rel-high: #15a34a; --rel-mid: #d97706; --rel-low: #dc2626;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -58,7 +60,7 @@ body {
 }
 button { font: inherit; color: inherit; cursor: pointer; }
 a { color: inherit; text-decoration: none; }
-:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 8px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
 
 /* ---------- En-tête ---------- */
 .topbar {
@@ -68,16 +70,16 @@ a { color: inherit; text-decoration: none; }
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
-.brand svg { width: 28px; height: 20px; }
+.brand svg { width: 26px; height: 26px; }
 .top-right { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .live { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); white-space: nowrap; }
-.pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; animation: pulse 2.2s infinite; }
-.live.stale { color: var(--red); }
+.pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; animation: pulse 2.2s infinite; }
+.live.stale { color: var(--accent); }
 .live.stale .pulse, .live.off .pulse { animation: none; background: var(--muted); }
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 0, 51, .55); }
-  70% { box-shadow: 0 0 0 8px rgba(255, 0, 51, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 0, 51, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(139, 123, 255, .55); }
+  70% { box-shadow: 0 0 0 8px rgba(139, 123, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(139, 123, 255, 0); }
 }
 .icon-btn {
   width: 34px; height: 34px; border-radius: 50%; border: none; flex-shrink: 0;
@@ -106,8 +108,8 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
 .hero {
   position: relative; overflow: hidden; margin: 14px 0 12px; padding: 20px 20px 0;
   border-radius: 26px; color: #fff;
-  background: radial-gradient(120% 90% at 100% 0%, #ff4d6d 0%, rgba(255, 77, 109, 0) 55%),
-              linear-gradient(160deg, #ff0033 0%, #d4002a 45%, #7d0018 100%);
+  background: radial-gradient(110% 90% at 100% 0%, #a99bff 0%, rgba(169, 155, 255, 0) 55%),
+              linear-gradient(160deg, #6d5cf6 0%, #4a36c9 50%, #221766 100%);
   transition: transform .2s var(--ease);
 }
 .hero.clickable { cursor: pointer; }
@@ -138,15 +140,15 @@ main { max-width: 640px; margin: 0 auto; padding: 8px 16px 120px; }
   background: var(--panel2); font-size: 13px; font-weight: 500; white-space: nowrap;
   transition: background .25s, color .25s, transform .15s var(--ease);
 }
-.chip b { color: var(--red); font-weight: 700; }
+.chip b { color: var(--accent); font-weight: 700; }
 button.chip:active { transform: scale(.95); }
-button.chip.on { background: var(--red); color: #fff; }
+button.chip.on { background: var(--accent); color: #fff; }
 .filters { margin: 14px 0 12px; }
 
 /* ---------- Sections et listes ---------- */
 .section-head { display: flex; justify-content: space-between; align-items: baseline; margin: 24px 4px 10px; }
 .section-head h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-.link { background: none; border: none; color: var(--red); font-size: 14px; font-weight: 500; padding: 4px; }
+.link { background: none; border: none; color: var(--accent); font-size: 14px; font-weight: 500; padding: 4px; }
 .group { background: var(--panel); border-radius: 18px; overflow: hidden; }
 .row {
   display: flex; align-items: center; gap: 12px; padding: 12px 14px;
@@ -164,40 +166,40 @@ button.chip.on { background: var(--red); color: #fff; }
   display: flex; align-items: center; justify-content: center;
   background: var(--panel2); color: var(--muted); font-size: 13px; font-weight: 700;
 }
-.rank.top { background: var(--red); color: #fff; }
+.rank.top { background: var(--accent); color: #fff; }
 .info { flex: 1; min-width: 0; }
 .info .tag { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .info .meta { font-size: 13px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar { height: 4px; border-radius: 2px; background: var(--panel2); margin-top: 7px; overflow: hidden; }
-.bar span { display: block; height: 100%; border-radius: 2px; background: var(--red); transform-origin: left; animation: grow .9s var(--ease) both; animation-delay: calc(var(--i, 0) * 40ms + .1s); }
+.bar span { display: block; height: 100%; border-radius: 2px; background: var(--accent); transform-origin: left; animation: grow .9s var(--ease) both; animation-delay: calc(var(--i, 0) * 40ms + .1s); }
 @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .spark-mini { width: 52px; height: 24px; flex-shrink: 0; }
 .spark-mini path { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .val { text-align: right; flex-shrink: 0; min-width: 76px; }
 .val b { display: block; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .val small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
-.st-boom, .st-up, .st-new { color: var(--red) !important; font-weight: 500; }
-.val small.st-boom { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 8px; background: var(--red); color: #fff !important; font-weight: 700; }
+.st-boom, .st-up, .st-new { color: var(--accent) !important; font-weight: 500; }
+.val small.st-boom { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 8px; background: var(--accent); color: #fff !important; font-weight: 700; }
 @media (max-width: 370px) { .spark-mini { display: none; } }
 .badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 12px; background: var(--panel2); color: var(--muted); white-space: nowrap; }
-.badge.st-boom { background: var(--red); color: #fff !important; }
-.badge.st-up, .badge.st-new { background: var(--red-soft); }
+.badge.st-boom { background: var(--accent); color: #fff !important; }
+.badge.st-up, .badge.st-new { background: var(--accent-soft); }
 .star {
   width: 34px; height: 34px; border-radius: 50%; border: none; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--panel2); color: var(--muted);
 }
 .star svg { width: 18px; height: 18px; }
-.star.on { background: var(--red-soft); color: var(--red); }
+.star.on { background: var(--accent-soft); color: var(--accent); }
 .star.on svg { fill: currentColor; }
 .star.pop { animation: pop .42s var(--ease); }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
 .cta-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border: none; background: none; text-align: left; }
 .cta-row .info .tag, .cta-row .info .meta { display: block; }
-.cta-icon { width: 36px; height: 36px; border-radius: 12px; background: var(--red-soft); color: var(--red); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cta-icon { width: 36px; height: 36px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .cta-icon svg { width: 18px; height: 18px; }
 .chev { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
-.more { display: block; width: 100%; padding: 14px; border: none; border-top: 1px solid var(--border); background: none; color: var(--red); font-weight: 500; font-size: 14px; }
+.more { display: block; width: 100%; padding: 14px; border: none; border-top: 1px solid var(--border); background: none; color: var(--accent); font-weight: 500; font-size: 14px; }
 
 .search {
   display: flex; align-items: center; gap: 10px; margin: 14px 0 12px; padding: 0 14px;
@@ -210,7 +212,7 @@ button.chip.on { background: var(--red); color: #fff; }
 }
 
 .empty { text-align: center; padding: 36px 24px 40px; }
-.empty-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 18px; background: var(--red-soft); display: flex; align-items: center; justify-content: center; }
+.empty-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 18px; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; }
 .empty-icon svg { width: 26px; height: 26px; }
 .empty h3 { margin: 0 0 6px; font-size: 17px; font-weight: 700; }
 .empty p { margin: 0 auto; max-width: 32ch; font-size: 14px; line-height: 1.45; color: var(--muted); }
@@ -221,7 +223,7 @@ button.chip.on { background: var(--red); color: #fff; }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
 .footnote { text-align: center; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 22px; }
-.footnote button { background: none; border: none; color: var(--red); font-size: 12px; padding: 0; }
+.footnote button { background: none; border: none; color: var(--accent); font-size: 12px; padding: 0; }
 
 /* ---------- Barre d'onglets ---------- */
 .tabbar {
@@ -232,7 +234,7 @@ button.chip.on { background: var(--red); color: #fff; }
 }
 .tabbar-inner { position: relative; display: flex; max-width: 520px; margin: 0 auto; }
 .tab-indicator { position: absolute; top: 2px; left: 0; width: 25%; height: 32px; transition: transform .45s var(--ease); pointer-events: none; }
-.tab-indicator::before { content: ""; position: absolute; left: 50%; top: 0; width: 60px; height: 32px; transform: translateX(-50%); border-radius: 16px; background: var(--red-soft); }
+.tab-indicator::before { content: ""; position: absolute; left: 50%; top: 0; width: 60px; height: 32px; transform: translateX(-50%); border-radius: 16px; background: var(--accent-soft); }
 .tabbtn {
   position: relative; z-index: 1; flex: 1; border: none; background: none;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -240,7 +242,7 @@ button.chip.on { background: var(--red); color: #fff; }
 }
 .tabbtn svg { width: 22px; height: 22px; transition: transform .2s var(--ease); }
 .tabbtn:active svg { transform: scale(.82); }
-.tabbtn.active { color: var(--red); }
+.tabbtn.active { color: var(--accent); }
 .tabbtn.bounce svg { animation: iconPop .45s var(--ease); }
 @keyframes iconPop { 0% { transform: scale(.8); } 55% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
@@ -260,12 +262,37 @@ button.chip.on { background: var(--red); color: #fff; }
 .sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .sheet-head h2 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.1; overflow-wrap: anywhere; }
 .sheet-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+/* ---------- Fiabilité ---------- */
+.rel { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 12px; font-weight: 500; color: var(--rel-c); }
+.rel-pips { display: flex; gap: 2px; }
+.rel-pips i { display: block; width: 10px; height: 5px; border-radius: 2px; background: var(--panel2); }
+.rel-pips i.on { background: var(--rel-c); }
+.rel-high { --rel-c: var(--rel-high); }
+.rel-mid { --rel-c: var(--rel-mid); }
+.rel-low { --rel-c: var(--rel-low); }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; width: 100%; margin: 0 0 10px; padding: 10px 14px; border: none; border-radius: 14px; background: var(--panel); font-size: 12px; color: var(--muted); text-align: left; }
+.legend .rel { margin: 0; }
+.legend .q { margin-left: auto; color: var(--accent); font-weight: 500; }
+.rel-box { margin: 16px 0 0; padding: 14px; border-radius: 14px; background: var(--panel2); }
+.rel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.rel-head > span:first-child { font-size: 15px; font-weight: 500; }
+.rel-head b { font-size: 16px; color: var(--rel-c); }
+.rel-head > span:last-child { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rel-track { position: relative; height: 8px; margin: 10px 0 12px; border-radius: 4px; background: linear-gradient(90deg, var(--rel-low) 0 35%, var(--rel-mid) 35% 65%, var(--rel-high) 65% 100%); opacity: .28; }
+.rel-bar { position: relative; height: 8px; margin: -20px 0 12px; border-radius: 4px; overflow: hidden; }
+.rel-bar span { display: block; height: 100%; border-radius: 4px; background: var(--rel-c); transform-origin: left; animation: grow .8s var(--ease) both; }
+.rel-crit { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 13px; }
+.rel-crit dt { color: var(--muted); }
+.rel-crit dd { margin: 0; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.rel-note { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.hero-top .rel-pill { display: inline-flex; align-items: center; gap: 6px; }
+.hero-top .rel-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--rel-c); box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
 .notice { margin: 14px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--panel2); font-size: 14px; line-height: 1.45; color: var(--muted); }
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; }
 .stat { background: var(--panel2); border-radius: 14px; padding: 12px 14px; }
 .stat .k { font-size: 12px; color: var(--muted); }
 .stat .v { font-size: 20px; font-weight: 700; margin-top: 3px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.stat .v.red { color: var(--red); }
+.stat .v.red { color: var(--accent); }
 .sheet h3 { margin: 20px 0 10px; font-size: 16px; font-weight: 700; }
 .chart-wrap { position: relative; height: 190px; }
 .chart-empty { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; color: var(--muted); background: var(--panel2); border-radius: 14px; padding: 0 20px; }
@@ -277,7 +304,7 @@ button.chip.on { background: var(--red); color: #fff; }
 .video .c { font-size: 12px; color: var(--muted); margin-top: 3px; }
 .follow-btn {
   width: 100%; margin-top: 20px; padding: 14px; border: none; border-radius: 14px;
-  background: var(--red); color: #fff; font-weight: 700; font-size: 15px;
+  background: var(--accent); color: #fff; font-weight: 700; font-size: 15px;
   transition: transform .15s var(--ease), background .2s;
 }
 .follow-btn:active { transform: scale(.98); }
@@ -306,7 +333,7 @@ button.chip.on { background: var(--red); color: #fff; }
 
 <header class="topbar">
   <div class="brand">
-    <svg viewBox="0 0 28 20" aria-hidden="true"><rect width="28" height="20" rx="6" fill="#ff0033"/><path d="M11.5 6 L19 10 L11.5 14 Z" fill="#fff"/></svg>
+    <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7bff"/><stop offset="1" stop-color="#4a36c9"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#lg)"/><path d="M15 45 L27 32 L35 39 L49 22" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M39 21 H50 V32" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     TrendBoard
   </div>
   <div class="top-right">
@@ -326,13 +353,14 @@ button.chip.on { background: var(--red); color: #fff; }
   <!-- ACCUEIL -->
   <section class="view active" id="view-accueil">
     <div class="hero" id="hero" tabindex="0">
-      <div class="hero-top"><span>Le plus rapide en ce moment</span><span id="heroBadge"></span></div>
+      <div class="hero-top"><span>La tendance du moment</span><span id="heroBadge"></span></div>
       <div class="hero-tag" id="heroTag">…</div>
       <div id="heroBody"></div>
     </div>
     <div class="chips" id="chips"></div>
 
     <div class="section-head"><h2>En pleine montée</h2><button class="link" data-goto="tendances">Tout voir</button></div>
+    <button class="legend" data-guide aria-label="Comprendre la fiabilité"><span>Fiabilité de la mesure</span><span class="rel rel-high"><span class="rel-pips"><i class="on"></i><i class="on"></i><i class="on"></i></span>Fiable</span><span class="rel rel-mid"><span class="rel-pips"><i class="on"></i><i class="on"></i><i></i></span>Assez fiable</span><span class="rel rel-low"><span class="rel-pips"><i class="on"></i><i></i><i></i></span>Peu fiable</span><span class="q">Pourquoi ?</span></button>
     <div class="group" id="homeTrending"></div>
 
     <div id="homeNewWrap" hidden>
@@ -358,6 +386,7 @@ button.chip.on { background: var(--red); color: #fff; }
   <!-- TENDANCES -->
   <section class="view" id="view-tendances">
     <div class="chips filters" id="catFilters"></div>
+    <button class="legend" data-guide aria-label="Comprendre la fiabilité"><span>Fiabilité de la mesure</span><span class="rel rel-high"><span class="rel-pips"><i class="on"></i><i class="on"></i><i class="on"></i></span>Fiable</span><span class="rel rel-mid"><span class="rel-pips"><i class="on"></i><i class="on"></i><i></i></span>Assez fiable</span><span class="rel rel-low"><span class="rel-pips"><i class="on"></i><i></i><i></i></span>Peu fiable</span><span class="q">Pourquoi ?</span></button>
     <div class="group" id="trendingList"></div>
   </section>
 
@@ -410,6 +439,7 @@ button.chip.on { background: var(--red); color: #fff; }
       <div class="stat"><div class="k">Vidéos dans les classements</div><div class="v" id="stN">—</div></div>
       <div class="stat"><div class="k">Vues cumulées</div><div class="v" id="stViews">—</div></div>
     </div>
+    <div id="relWrap"></div>
     <h3>Vues gagnées par heure</h3>
     <div class="chart-wrap" id="chartWrap"><canvas id="chartCanvas"></canvas></div>
     <div id="relatedWrap"><h3>Souvent utilisés avec</h3><div class="related" id="related"></div></div>
@@ -436,6 +466,13 @@ button.chip.on { background: var(--red); color: #fff; }
     <dd><span class="badge">En baisse</span>recul de 10 % ou plus.</dd>
     <dd><span class="badge st-new">Nouveau</span>entré dans les classements il y a moins de 3 heures.</dd>
     <dd><span class="badge">Mesure en cours</span>pas encore assez d'historique pour comparer.</dd>
+    <dd><span class="badge">Vidéo unique</span>un seul Short porte ce hashtag pour l'instant : sa vitesse n'est pas encore comparable et il n'apparaît pas dans Tendances. Il y entre dès qu'un 2ᵉ Short le reprend.</dd>
+    <dt>Fiabilité de la mesure</dt>
+    <dd>Un chiffre de vitesse n'a pas la même valeur selon ce qu'il y a derrière. La note sur 100 combine trois choses : le nombre de Shorts qui portent le hashtag, la durée d'observation, et la répartition des vues entre ces Shorts.</dd>
+    <dd><span class="rel rel-high"><span class="rel-pips"><i class="on"></i><i class="on"></i><i class="on"></i></span>Fiable</span>beaucoup de Shorts, plusieurs heures de mesures, vues bien réparties. La tendance est solide.</dd>
+    <dd><span class="rel rel-mid"><span class="rel-pips"><i class="on"></i><i class="on"></i><i></i></span>Assez fiable</span>quelques Shorts, ou une vidéo qui pèse beaucoup. À surveiller.</dd>
+    <dd><span class="rel rel-low"><span class="rel-pips"><i class="on"></i><i></i><i></i></span>Peu fiable</span>une seule vidéo, ou presque toutes les vues viennent d'une seule. Un gros chiffre ici peut n'être qu'un coup isolé.</dd>
+    <dd>Le classement Tendances tient compte des deux : un hashtag porté par 50 Shorts passe devant un hashtag qui va un peu plus vite grâce à une seule vidéo.</dd>
     <dt>Populaires</dt>
     <dd>Le total des vues des vidéos qui portent le hashtag. Utile pour repérer les sujets installés.</dd>
     <dt>D'où viennent les données</dt>
@@ -452,12 +489,12 @@ const TABS = ["accueil", "suivis", "tendances", "populaires"];
 const PAGE_INFO = {
   accueil:    ["Accueil", "Les hashtags YouTube Shorts qui montent en France"],
   suivis:     ["Suivis", "Touchez l'étoile pour suivre un hashtag"],
-  tendances:  ["Tendances", "Classées par vues gagnées par heure"],
+  tendances:  ["Tendances", "Classées par vitesse, en tenant compte de la fiabilité"],
   populaires: ["Populaires", "Classés par vues cumulées des vidéos"],
 };
 const STATUS = {
   boom: "Explosion", up: "En hausse", flat: "Stable", down: "En baisse",
-  new: "Nouveau", wait: "Mesure en cours", gone: "Absent",
+  new: "Nouveau", wait: "Mesure en cours", gone: "Absent", single: "Vidéo unique",
 };
 const STALE_MINUTES = 40;
 const LIST_STEP = 50;
@@ -526,24 +563,74 @@ function dataUrl() {
   return m && repo ? `https://raw.githubusercontent.com/${m[1]}/${repo}/data/data.json` : "./data.json";
 }
 
+/* ---------- Fiabilité ---------- */
+function accentColor() { return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#8b7bff"; }
+function accentRgba(a) {
+  const n = parseInt(accentColor().replace("#", ""), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+const REL = {
+  high: { label: "Fiable", pips: 3 },
+  mid:  { label: "Assez fiable", pips: 2 },
+  low:  { label: "Peu fiable", pips: 1 },
+};
+function reliability(t, rawSeries) {
+  if (!t.active) return null;
+  const n = t.n || 0;
+  // 1. Nombre de Shorts : 1 = 0, 20 ou plus = maximum
+  const volume = n <= 1 ? 0 : Math.min(1, Math.log(n) / Math.log(20));
+  // 2. Durée d'observation : 2 h de mesures = maximum
+  let hours = 0;
+  if (rawSeries.length > 1) {
+    hours = (new Date(rawSeries[rawSeries.length - 1][0]) - new Date(rawSeries[0][0])) / 3600000;
+    if (!isFinite(hours) || hours < 0) hours = 0;
+  }
+  const history = Math.min(1, hours / 2);
+  // 3. Répartition : part de la vitesse qui vient de la vidéo la plus rapide
+  const topVph = t.videos && t.videos[0] && t.videos[0].vph;
+  let share = null;
+  if (n <= 1) share = 1;
+  else if (topVph && t.vph > 0) share = Math.min(1, topVph / t.vph);
+  const spread = share === null ? 0.5 : Math.min(1, (1 - share) / 0.6);
+  let score = Math.round(100 * (0.45 * volume + 0.2 * history + 0.35 * spread));
+  if (n <= 1) score = Math.min(score, 20);
+  else if (share !== null && share >= 0.85) score = Math.min(score, 34); // une vidéo fait presque tout
+  const level = score >= 65 ? "high" : score >= 35 ? "mid" : "low";
+  return { score, level, n, hours, share };
+}
+// Vitesse pondérée par la fiabilité : c'est elle qui ordonne les classements.
+function rankScore(t) {
+  const r = t.rel ? t.rel.score : 0;
+  return t.vph * (0.25 + 0.75 * r / 100);
+}
+function relHtml(t) {
+  if (!t.rel) return "";
+  const { level } = t.rel, info = REL[level];
+  const pips = [1, 2, 3].map((k) => `<i${k <= info.pips ? ' class="on"' : ""}></i>`).join("");
+  return `<div class="rel rel-${level}" title="Fiabilité ${t.rel.score} sur 100"><span class="rel-pips" aria-hidden="true">${pips}</span>${info.label}</div>`;
+}
+
 /* ---------- Préparation des données ---------- */
 function prepare(json) {
   const list = (json && json.version === 2 && Array.isArray(json.tags)) ? json.tags : [];
   const firstTimes = list.map((t) => new Date(t.first_seen).getTime()).filter(isFinite);
   const origin = firstTimes.length ? Math.min(...firstTimes) : Date.now();
   tags = list.map((t) => {
-    const series = (t.series || []).map((p) => Number(p[1]) || 0);
+    const rawSeries = Array.isArray(t.series) ? t.series : [];
+    const series = rawSeries.map((p) => Number(p[1]) || 0);
+    const rel = reliability(t, rawSeries);
     let status;
     const firstMs = new Date(t.first_seen).getTime();
     const isNew = t.active && minutesSince(t.first_seen) < 180 && firstMs - origin > 30 * 60000;
     if (!t.active) status = "gone";
+    else if (t.n < 2) status = "single";
     else if (isNew) status = "new";
     else if (t.trend === null || t.trend === undefined) status = "wait";
     else if (t.trend >= 0.5) status = "boom";
     else if (t.trend >= 0.1) status = "up";
     else if (t.trend > -0.1) status = "flat";
     else status = "down";
-    return { ...t, series, status };
+    return { ...t, series, status, rel };
   });
   byKey = new Map(tags.map((t) => [t.key, t]));
   const leaders = tags.filter((t) => t.active && t.group === t.key);
@@ -552,7 +639,7 @@ function prepare(json) {
 }
 
 /* ---------- Rendu ---------- */
-const PLAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="#ff0033"/></svg>';
+const PLAY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:26px;height:26px;stroke:var(--accent)"><path d="m4 17 5-5 3.5 3.5L20 8"/><path d="M14.5 8H20v5.5"/></svg>';
 function emptyHtml(title, text, action) {
   return `<div class="empty"><div class="empty-icon">${PLAY_ICON}</div>
     <h3>${title}</h3><p>${text}</p>
@@ -573,21 +660,22 @@ function rowHtml(t, i, mode, maxViews, noRank) {
   let right = "", bar = "";
   if (mode === "trend") {
     const path = sparkPath(t.series, 52, 24);
-    right = (path ? `<svg class="spark-mini" viewBox="0 0 52 24" aria-hidden="true"><path d="${path}" stroke="${t.status === "down" ? "var(--muted)" : "#ff0033"}"/></svg>` : "")
+    right = (path ? `<svg class="spark-mini" viewBox="0 0 52 24" aria-hidden="true"><path d="${path}" style="stroke:${t.status === "down" ? "var(--muted)" : "var(--accent)"}"/></svg>` : "")
       + `<div class="val"><b>${compact(t.vph)}/h</b>${statusSmall(t)}</div>`;
   } else if (mode === "popular") {
     right = `<div class="val"><b>${compact(t.views)}</b><small>vues</small></div>`;
     bar = maxViews ? `<div class="bar"><span style="width:${Math.max(3, (t.views / maxViews) * 100).toFixed(1)}%"></span></div>` : "";
   } else {
     const on = followed.has(t.key);
-    right = `<div class="val">${t.active && t.vph ? `<b>${compact(t.vph)}/h</b>` : ""}${statusSmall(t)}</div>
+    const showVph = t.active && t.vph && t.status !== "single";
+    right = `<div class="val">${showVph ? `<b>${compact(t.vph)}/h</b>` : ""}${statusSmall(t)}</div>
       <button class="star ${on ? "on" : ""}" data-star="${esc(t.key)}" aria-label="${on ? "Ne plus suivre" : "Suivre"} #${esc(t.label)}">
         <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/></svg>
       </button>`;
   }
   return `<div class="row ${t.active ? "" : "dim"}" data-open="${esc(t.key)}" role="button" tabindex="0" style="--i:${Math.min(i, 14)}">
     ${rank}
-    <div class="info"><div class="tag">#${esc(t.label)}</div><div class="meta">${esc(metaText(t))}</div>${bar}</div>
+    <div class="info"><div class="tag">#${esc(t.label)}</div><div class="meta">${esc(metaText(t))}</div>${mode === "popular" ? "" : relHtml(t)}${bar}</div>
     ${right}
   </div>`;
 }
@@ -598,11 +686,12 @@ function listHtml(id, list, mode, maxViews) {
   return shown + (rest > 0 ? `<button class="more" data-more="${id}">Afficher ${Math.min(rest, LIST_STEP)} de plus (${rest} restants)</button>` : "");
 }
 
-function byVph(a, b) { return b.vph - a.vph || b.views - a.views; }
+function byVph(a, b) { return rankScore(b) - rankScore(a) || b.vph - a.vph || b.views - a.views; }
 
 function renderHero() {
   const hero = $("hero");
-  const top = [...rankable].filter((t) => t.vph > 0).sort(byVph)[0];
+  const ranked = [...rankable].filter((t) => t.vph > 0).sort(byVph);
+  const top = ranked.find((t) => t.rel && t.rel.level !== "low") || ranked[0];
   if (!top) {
     hero.classList.remove("clickable");
     delete hero.dataset.open;
@@ -616,7 +705,8 @@ function renderHero() {
   }
   hero.classList.add("clickable");
   hero.dataset.open = top.key;
-  $("heroBadge").innerHTML = `<span class="badge">${STATUS[top.status]}</span>`;
+  $("heroBadge").innerHTML = (top.rel ? `<span class="badge rel-pill rel-${top.rel.level}">${REL[top.rel.level].label}</span> ` : "")
+    + `<span class="badge">${STATUS[top.status]}</span>`;
   $("heroTag").textContent = "#" + top.label;
   const changed = heroShown !== top.key;
   heroShown = top.key;
@@ -820,6 +910,30 @@ function closeSheets() {
   document.body.style.overflow = "";
   openKey = null;
 }
+function relBox(t) {
+  if (!t.rel) return "";
+  const r = t.rel, info = REL[r.level];
+  const hours = r.hours < 1 ? `${Math.max(0, Math.round(r.hours * 60))} min` : `${r.hours < 10 ? r.hours.toFixed(1).replace(".", ",") : Math.round(r.hours)} h`;
+  const share = r.share === null ? "Inconnue" : r.n <= 1 ? "Une seule vidéo" : `${Math.round(r.share * 100)} % pour la 1re vidéo`;
+  const note = r.level === "high"
+    ? "Beaucoup de Shorts et des vues bien réparties : cette tendance ne dépend pas d'une seule vidéo."
+    : r.level === "mid"
+      ? "Mesure correcte, mais encore peu de Shorts ou une vidéo qui pèse lourd. À confirmer dans les prochaines heures."
+      : r.n <= 1
+        ? "Une seule vidéo porte ce hashtag : sa vitesse est celle de cette vidéo, pas celle d'une tendance."
+        : "Presque toutes les vues viennent d'une seule vidéo : le chiffre peut retomber vite.";
+  return `<div class="rel-box rel-${r.level}">
+    <div class="rel-head"><span>Fiabilité : <b>${info.label}</b></span><span>${r.score} sur 100</span></div>
+    <div class="rel-track"></div>
+    <div class="rel-bar"><span style="width:${Math.max(4, r.score)}%"></span></div>
+    <dl class="rel-crit">
+      <dt>Shorts qui portent le hashtag</dt><dd>${r.n}</dd>
+      <dt>Durée de mesure</dt><dd>${hours}</dd>
+      <dt>Répartition des vues</dt><dd>${share}</dd>
+    </dl>
+    <p class="rel-note">${note}</p>
+  </div>`;
+}
 function openSheet(key) {
   const t = byKey.get(key);
   if (!t) return;
@@ -842,6 +956,7 @@ function fillSheet(t, animate) {
   $("stTrend").classList.toggle("red", (t.trend || 0) > 0);
   $("stN").textContent = t.active ? t.n : "0";
   $("stViews").textContent = compact(t.views);
+  $("relWrap").innerHTML = relBox(t);
 
   const related = (t.related || []).map((k) => byKey.get(k)).filter(Boolean);
   $("relatedWrap").hidden = !related.length;
@@ -877,13 +992,13 @@ function drawChart(t) {
   const ctx = $("chartCanvas").getContext("2d");
   const muted = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#a3a3a3";
   const grad = ctx.createLinearGradient(0, 0, 0, 190);
-  grad.addColorStop(0, "rgba(255,0,51,0.35)");
-  grad.addColorStop(1, "rgba(255,0,51,0)");
+  grad.addColorStop(0, accentRgba(0.35));
+  grad.addColorStop(1, accentRgba(0));
   const raw = (data.tags.find((x) => x.key === t.key) || {}).series || [];
   const labels = raw.map((p) => new Date(p[0]).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
   chart = new Chart(ctx, {
     type: "line",
-    data: { labels, datasets: [{ data: points, borderColor: "#ff0033", backgroundColor: grad, fill: true, tension: 0.35, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }] },
+    data: { labels, datasets: [{ data: points, borderColor: accentColor(), backgroundColor: grad, fill: true, tension: 0.35, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       animation: { duration: 900, easing: "easeOutQuart" },
@@ -905,9 +1020,9 @@ function svgChart(t) {
   const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
   const time = (i) => raw[i] ? new Date(raw[i][0]).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none" role="img" aria-label="Vues gagnées par heure">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff0033" stop-opacity=".35"/><stop offset="1" stop-color="#ff0033" stop-opacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--accent)" stop-opacity=".35"/><stop offset="1" style="stop-color:var(--accent)" stop-opacity="0"/></linearGradient></defs>
     <path d="${line} L${w},${h - bottom} L0,${h - bottom} Z" fill="url(#g)"/>
-    <path d="${line}" fill="none" stroke="#ff0033" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="${line}" fill="none" style="stroke:var(--accent)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
     <text x="0" y="10" font-size="11" fill="var(--muted)">max ${compact(max)}/h</text>
     <text x="0" y="${h - 4}" font-size="11" fill="var(--muted)">${time(0)}</text>
     <text x="${w}" y="${h - 4}" font-size="11" fill="var(--muted)" text-anchor="end">${time(raw.length - 1)}</text>
