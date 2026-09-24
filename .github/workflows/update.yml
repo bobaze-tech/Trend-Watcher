@@ -8,9 +8,15 @@ on:
 permissions:
   contents: write
 
+# Jamais deux collectes en même temps (sinon l'historique peut s'écraser).
+concurrency:
+  group: trendboard-data
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
@@ -20,15 +26,31 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Collecte TikTok + YouTube
+      - name: Récupérer l'historique (branche data)
+        run: |
+          rm -f history.json data.json
+          if git fetch --depth=1 origin data:refs/remotes/origin/data 2>/dev/null; then
+            git show refs/remotes/origin/data:history.json > history.json 2>/dev/null || rm -f history.json
+          fi
+
+      - name: Collecte YouTube
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python collect_and_compute.py
 
-      - name: Commit et push si data.json a changé
+      # Les données vont sur une branche à part, réécrite à chaque passage :
+      # le dépôt ne grossit pas et le site n'est pas redéployé toutes les 10 min.
+      - name: Publier les données sur la branche data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ ! -f data.json ]; then echo "Pas de nouvelles données."; exit 0; fi
+          mkdir -p /tmp/out && cp data.json history.json /tmp/out/
+          cd /tmp/out
+          git init -q -b data
           git config user.name "trendboard-bot"
           git config user.email "bot@trendboard.local"
           git add data.json history.json
-          git diff --cached --quiet || git commit -m "Mise à jour automatique des trends"
-          git push
+          git commit -q -m "Données du $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+          echo "Données publiées sur la branche data."
