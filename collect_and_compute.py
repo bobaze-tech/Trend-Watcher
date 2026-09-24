@@ -1,223 +1,344 @@
 """
-TrendBoard — collecte multi-plateformes
+TrendBoard — collecte YouTube Shorts (v2)
 ------------------------------------------
-Exécuté automatiquement toutes les 10 minutes par
-.github/workflows/update.yml.
+Exécuté toutes les 10 minutes par .github/workflows/update.yml.
 
-Plateformes couvertes (celles pour lesquelles des données fiables existent) :
-- TikTok  : via l'endpoint interne du Creative Center (non officiel, peut
-            casser si TikTok change son site — voir le warning plus bas)
-- YouTube : via l'API Data v3 officielle de Google (fiable, nécessite une
-            clé API gratuite — voir README.md)
+Ce que fait le script à chaque passage :
+1. Récupère les classements "populaires" de YouTube en France : le
+   classement général (200 vidéos) + un classement par catégorie.
+   Coût : environ 12 unités de quota par passage (~1 700/jour sur 10 000).
+2. Garde les Shorts (vidéos de 3 minutes ou moins).
+3. Extrait les hashtags de chaque vidéo (tags, titre, description), les
+   normalise pour éviter les doublons (#Foot, #foot, #Foot! = un seul tag)
+   et écarte les tags génériques (#shorts, #viral, #fyp…).
+4. Mesure la VITESSE : vues gagnées par heure par les vidéos de chaque
+   hashtag, en comparant chaque vidéo avec son passage précédent. C'est cette
+   vitesse qui classe les tendances, et non plus la somme brute des vues
+   (qui sautait dès qu'une vidéo entrait ou sortait du classement).
+5. Écrit history.json (mémoire) et data.json (ce que le site affiche).
 
-Instagram a été volontairement exclu : Meta ne fournit aucune API publique
-de hashtags/reels tendance, y compris pour les comptes business, donc
-aucune donnée fiable n'est disponible côté Instagram.
-
-Le fichier de sortie data.json contient un champ "platform" par entrée,
-et le site filtre dessus selon l'onglet sélectionné.
+Instagram et TikTok ne sont pas collectés (pas d'accès public fiable).
 """
 
 import json
 import os
-from datetime import datetime, timezone
+import re
+import unicodedata
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta, timezone
 
 import requests
 
+API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
+VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
+REGION = "FR"
+SHORT_MAX_SECONDS = 180          # les Shorts peuvent durer jusqu'à 3 minutes
+GENERAL_PAGES = 4                # 4 x 50 vidéos du classement général
+
 HISTORY_PATH = "history.json"
 DATA_PATH = "data.json"
-MAX_HISTORY_POINTS = 288  # ~48h à raison d'un point / 10 min
 
+VIDEO_TTL = timedelta(hours=24)       # on oublie une vidéo absente depuis 24 h
+TAG_TTL = timedelta(hours=48)         # on oublie un tag absent depuis 48 h
+MAX_GAP = timedelta(hours=3)          # au-delà, l'écart entre 2 mesures n'est pas fiable
+SERIES_WINDOW = timedelta(hours=24)   # durée affichée dans les graphiques
+SERIES_POINTS = 36                    # points max par graphique (poids du fichier)
 
-# ---------------------------------------------------------------------
-# TikTok — endpoint interne non officiel
-# ---------------------------------------------------------------------
-TIKTOK_ENDPOINT = "https://ads.tiktok.com/creative_radar_api/v1/popular_trend/hashtag/list"
-TIKTOK_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Content-Type": "application/json",
+CATEGORY_NAMES = {
+    "1": "Films et animation", "2": "Auto et moto", "10": "Musique",
+    "15": "Animaux", "17": "Sport", "19": "Voyages", "20": "Jeux vidéo",
+    "22": "Vlogs", "23": "Humour", "24": "Divertissement", "25": "Actualités",
+    "26": "Tutos et style", "27": "Éducation", "28": "Science et tech",
+    "29": "Associatif",
 }
-TIKTOK_PARAMS = {"page": 1, "limit": 50, "period": 7, "country_code": "FR"}
+CHART_CATEGORIES = ["10", "17", "20", "22", "23", "24", "26", "28"]
+
+# Tags qui décrivent la plateforme ou l'algorithme, pas un sujet.
+GENERIC_TAGS = {
+    "shorts", "short", "youtubeshorts", "youtubeshort", "shortsvideo", "shortvideo",
+    "shortsfeed", "shortsyoutube", "ytshorts", "ytshort", "youtube", "yt", "video",
+    "videos", "viral", "viralshorts", "viralvideo", "viralvideos", "trending",
+    "trend", "trendingshorts", "tendance", "fyp", "foryou", "foryoupage", "pourtoi",
+    "explore", "explorepage", "subscribe", "abonnetoi", "abonnezvous", "like",
+    "follow", "new", "tiktok", "reels", "instagram", "funny", "fun", "lol",
+    "memes", "meme", "fr", "france", "french", "francais",
+}
+
+HASHTAG_RE = re.compile(r"#([^\s#.,!?;:()\[\]{}\"'«»]+)")
 
 
-def fetch_tiktok() -> list[dict]:
-    """Retourne une liste de {tag, count} pour TikTok."""
-    try:
-        r = requests.get(TIKTOK_ENDPOINT, headers=TIKTOK_HEADERS, params=TIKTOK_PARAMS, timeout=15)
-        print(f"[tiktok] code HTTP reçu : {r.status_code}")
-    except requests.RequestException as exc:
-        print(f"[tiktok] échec réseau : {exc}")
-        return []
+# ---------------------------------------------------------------------
+# Normalisation des hashtags
+# ---------------------------------------------------------------------
+def tag_key(raw: str) -> str:
+    """Clé de dédoublonnage : minuscules, sans accents, sans espaces ni ponctuation."""
+    s = unicodedata.normalize("NFKD", raw.strip().lstrip("#").lower())
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"[\W_]+", "", s)
 
-    if r.status_code != 200:
-        # On log un extrait du corps de la réponse pour comprendre le blocage
-        # (souvent un 403/429 avec une page HTML de type "access denied").
-        print(f"[tiktok] réponse non-200, extrait du corps : {r.text[:300]!r}")
-        return []
 
-    try:
+def tag_label(raw: str) -> str:
+    """Forme affichée : minuscules, accents conservés, sans espaces ni ponctuation."""
+    s = unicodedata.normalize("NFKC", raw.strip().lstrip("#").lower())
+    return re.sub(r"[\W_]+", "", s)
+
+
+def is_useful(key: str) -> bool:
+    return 2 <= len(key) <= 40 and not key.isdigit() and key not in GENERIC_TAGS
+
+
+def extract_tags(snippet: dict) -> dict:
+    """Retourne {clé: libellé} pour une vidéo, chaque tag compté une seule fois."""
+    raws = list(snippet.get("tags") or [])
+    raws += HASHTAG_RE.findall(snippet.get("title", ""))
+    raws += HASHTAG_RE.findall(snippet.get("description", ""))
+    found = {}
+    for raw in raws:
+        key = tag_key(raw)
+        if is_useful(key) and key not in found:
+            found[key] = tag_label(raw) or key
+    return found
+
+
+# ---------------------------------------------------------------------
+# Appels YouTube
+# ---------------------------------------------------------------------
+def duration_seconds(iso: str) -> int:
+    m = re.fullmatch(r"P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso or "")
+    if not m:
+        return 10 ** 6
+    d, h, mi, s = (int(x or 0) for x in m.groups())
+    return d * 86400 + h * 3600 + mi * 60 + s
+
+
+def fetch_chart(category: str | None = None, pages: int = 1) -> list[dict]:
+    items, token = [], None
+    for _ in range(pages):
+        params = {
+            "part": "snippet,statistics,contentDetails",
+            "chart": "mostPopular",
+            "regionCode": REGION,
+            "maxResults": 50,
+            "key": API_KEY,
+        }
+        if category:
+            params["videoCategoryId"] = category
+        if token:
+            params["pageToken"] = token
+        try:
+            r = requests.get(VIDEOS_URL, params=params, timeout=20)
+        except requests.RequestException as exc:
+            print(f"[youtube] échec réseau ({category or 'général'}) : {exc}")
+            break
+        if r.status_code != 200:
+            # Certaines catégories n'ont pas de classement en France : on continue.
+            print(f"[youtube] classement {category or 'général'} indisponible (HTTP {r.status_code})")
+            break
         payload = r.json()
-    except ValueError:
-        print(f"[tiktok] réponse non-JSON, extrait : {r.text[:300]!r}")
-        return []
-
-    items = payload.get("data", {}).get("list", [])
-    if not items:
-        # On log les clés de premier niveau pour voir si TikTok a changé
-        # la structure de sa réponse (le chemin data.list ne serait alors
-        # plus le bon).
-        print(f"[tiktok] 0 item trouvé au chemin data.list — clés reçues : {list(payload.keys())}")
-        print(f"[tiktok] extrait complet du payload : {str(payload)[:500]}")
-
-    return [
-        {"tag": it.get("hashtag_name"), "count": it.get("video_views") or it.get("video_count") or 0}
-        for it in items
-        if it.get("hashtag_name")
-    ]
+        items += payload.get("items", [])
+        token = payload.get("nextPageToken")
+        if not token:
+            break
+    return items
 
 
-# ---------------------------------------------------------------------
-# YouTube — API Data v3 officielle
-# ---------------------------------------------------------------------
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
-YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
-
-
-def fetch_youtube() -> list[dict]:
-    """
-    Retourne une liste de {tag, count} pour YouTube, construite à partir
-    des vidéos les plus populaires du jour (chart=mostPopular), filtrées
-    sur les Shorts (durée <= 60s), en agrégeant les vues par hashtag
-    présent dans les tags/le titre de la vidéo.
-    """
-    if not YOUTUBE_API_KEY:
-        print("[youtube] YOUTUBE_API_KEY absente — collecte ignorée. Voir README.md.")
-        return []
-
-    try:
-        r = requests.get(
-            YOUTUBE_VIDEOS_URL,
-            params={
-                "part": "snippet,statistics,contentDetails",
-                "chart": "mostPopular",
-                "regionCode": "FR",
-                "maxResults": 50,
-                "key": YOUTUBE_API_KEY,
-            },
-            timeout=15,
-        )
-        r.raise_for_status()
-        items = r.json().get("items", [])
-    except requests.RequestException as exc:
-        print(f"[youtube] échec de la collecte : {exc}")
-        return []
-
-    def is_short(duration_iso: str) -> bool:
-        # Format ISO 8601 simplifié type "PT58S" ou "PT1M2S"
-        if "H" in duration_iso:
-            return False
-        minutes, seconds = 0, 0
-        num = ""
-        for ch in duration_iso.replace("PT", ""):
-            if ch.isdigit():
-                num += ch
-            elif ch == "M":
-                minutes = int(num or 0)
-                num = ""
-            elif ch == "S":
-                seconds = int(num or 0)
-                num = ""
-        return (minutes * 60 + seconds) <= 60
-
-    tag_counts: dict[str, int] = {}
-    for it in items:
-        duration = it.get("contentDetails", {}).get("duration", "")
-        if not is_short(duration):
-            continue
-        views = int(it.get("statistics", {}).get("viewCount", 0))
-        tags = it.get("snippet", {}).get("tags", []) or []
-        title_hashtags = [w[1:] for w in it.get("snippet", {}).get("title", "").split() if w.startswith("#")]
-        for tag in (tags + title_hashtags):
-            clean = tag.strip().lower().replace(" ", "")
-            if not clean:
-                continue
-            tag_counts[clean] = tag_counts.get(clean, 0) + views
-
-    return [{"tag": tag, "count": count} for tag, count in tag_counts.items()]
-
-
-# ---------------------------------------------------------------------
-# Historique, momentum, écriture
-# ---------------------------------------------------------------------
-def load_history() -> dict:
-    if os.path.exists(HISTORY_PATH):
-        with open(HISTORY_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-def save_history(history: dict) -> None:
-    with open(HISTORY_PATH, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False)
-
-
-def compute_momentum(points: list[dict]) -> tuple[float, float, float]:
-    counts = [p["v"] for p in points]
-    if len(counts) < 3:
-        return 0.0, 0.0, 0.0
-    diffs = [counts[i + 1] - counts[i] for i in range(len(counts) - 1)]
-    growth = sum(diffs) / len(diffs)
-    accel_pts = [diffs[i + 1] - diffs[i] for i in range(len(diffs) - 1)]
-    accel = sum(accel_pts) / len(accel_pts) if accel_pts else 0.0
-    return growth, accel, growth + accel * 3
-
-
-def main() -> None:
-    history = load_history()
-    now = datetime.now(timezone.utc).isoformat()
-
-    # TikTok désactivé : l'endpoint testé (Ads Manager) renvoie
-    # systématiquement "no permission" (code 40101) sans session
-    # publicitaire authentifiée — ce n'est pas contournable proprement.
-    # On garde fetch_tiktok() dans le fichier pour référence, mais on ne
-    # l'appelle plus. Seul YouTube est collecté pour l'instant.
-    platform_results = {
-        "youtube": fetch_youtube(),
+def fetch_shorts() -> tuple[dict, int]:
+    """Retourne ({id: vidéo}, nombre total de vidéos vues) pour les Shorts dédoublonnés."""
+    raw = fetch_chart(None, GENERAL_PAGES)
+    for cat in CHART_CATEGORIES:
+        raw += fetch_chart(cat, 1)
+    unique = {it["id"]: it for it in raw if it.get("id")}
+    shorts = {
+        vid: it for vid, it in unique.items()
+        if duration_seconds(it.get("contentDetails", {}).get("duration", "")) <= SHORT_MAX_SECONDS
     }
+    return shorts, len(unique)
 
-    for platform, items in platform_results.items():
-        for item in items:
-            key = f"{platform}:{item['tag']}"
-            series = history.setdefault(key, [])
-            series.append({"t": now, "v": item["count"]})
-            history[key] = series[-MAX_HISTORY_POINTS:]
 
-    save_history(history)
+# ---------------------------------------------------------------------
+# Historique
+# ---------------------------------------------------------------------
+def parse_time(s: str) -> datetime:
+    return datetime.fromisoformat(s)
 
-    hashtags = []
-    for key, points in history.items():
-        if not points or ":" not in key:
-            continue
-        platform, tag = key.split(":", 1)
-        growth, accel, score = compute_momentum(points)
-        hashtags.append({
-            "platform": platform,
-            "tag": tag,
-            "latest_count": points[-1]["v"],
-            "growth": round(growth, 1),
-            "accel": round(accel, 1),
-            "score": round(score, 1),
-            "history": points[-48:],
+
+def load_state() -> dict:
+    if os.path.exists(HISTORY_PATH):
+        try:
+            with open(HISTORY_PATH, "r", encoding="utf-8") as f:
+                state = json.load(f)
+            if state.get("version") == 2:
+                return state
+            print("[historique] ancien format détecté : nouvel historique démarré.")
+        except (ValueError, OSError):
+            print("[historique] fichier illisible : nouvel historique démarré.")
+    return {"version": 2, "videos": {}, "tags": {}}
+
+
+def downsample(points: list, limit: int) -> list:
+    if len(points) <= limit:
+        return points
+    step = (len(points) - 1) / (limit - 1)
+    return [points[round(i * step)] for i in range(limit)]
+
+
+def mean(values: list) -> float:
+    return sum(values) / len(values) if values else 0.0
+
+
+# ---------------------------------------------------------------------
+# Programme principal
+# ---------------------------------------------------------------------
+def main() -> None:
+    if not API_KEY:
+        print("[youtube] YOUTUBE_API_KEY absente : collecte ignorée.")
+        return
+
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    now_s = now.isoformat()
+    state = load_state()
+    videos_state, tags_state = state["videos"], state["tags"]
+
+    shorts, total_videos = fetch_shorts()
+    print(f"[youtube] {total_videos} vidéos récupérées, dont {len(shorts)} Shorts")
+    if not shorts:
+        print("[youtube] aucun Short récupéré : données inchangées.")
+        return
+
+    # --- Vitesse par vidéo -------------------------------------------------
+    video_tags: dict[str, dict] = {}
+    video_vph: dict[str, float | None] = {}
+    video_cat: dict[str, str] = {}
+    for vid, it in shorts.items():
+        snippet = it.get("snippet", {})
+        views = int(it.get("statistics", {}).get("viewCount", 0))
+        prev = videos_state.get(vid)
+        vph = None
+        if prev:
+            dt = now - parse_time(prev["t"])
+            if timedelta(minutes=3) <= dt <= MAX_GAP and views >= prev["v"]:
+                vph = (views - prev["v"]) / (dt.total_seconds() / 3600)
+        video_vph[vid] = vph
+        video_tags[vid] = extract_tags(snippet)
+        video_cat[vid] = CATEGORY_NAMES.get(str(snippet.get("categoryId", "")), "Autre")
+        videos_state[vid] = {
+            "v": views, "t": now_s,
+            "title": snippet.get("title", "")[:120],
+            "ch": snippet.get("channelTitle", "")[:60],
+            "first": prev["first"] if prev else now_s,
+        }
+
+    # --- Agrégation par hashtag -------------------------------------------
+    tag_videos: dict[str, list] = defaultdict(list)
+    label_votes: dict[str, Counter] = defaultdict(Counter)
+    for vid, tags in video_tags.items():
+        for key, label in tags.items():
+            tag_videos[key].append(vid)
+            label_votes[key][label] += 1
+
+    for key, vids in tag_videos.items():
+        views_total = sum(videos_state[v]["v"] for v in vids)
+        known = [video_vph[v] for v in vids if video_vph[v] is not None]
+        entry = tags_state.setdefault(key, {"first": now_s, "points": []})
+        entry["label"] = label_votes[key].most_common(1)[0][0]
+        entry["points"].append({
+            "t": now_s, "views": views_total, "n": len(vids),
+            "vph": round(sum(known)) if known else None,
         })
 
-    output = {"generated_at": now, "hashtags": hashtags}
-    with open(DATA_PATH, "w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False)
+    # --- Nettoyage -----------------------------------------------------------
+    for vid in [v for v, d in videos_state.items() if now - parse_time(d["t"]) > VIDEO_TTL]:
+        del videos_state[vid]
+    for key in list(tags_state):
+        pts = [p for p in tags_state[key]["points"] if now - parse_time(p["t"]) <= TAG_TTL]
+        if pts:
+            tags_state[key]["points"] = pts
+        else:
+            del tags_state[key]
 
-    print(f"{len(hashtags)} hashtags écrits dans {DATA_PATH}")
+    state["updated"] = now_s
+    with open(HISTORY_PATH, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, separators=(",", ":"))
+
+    # --- Tags associés (co-occurrence dans les vidéos actuelles) -------------
+    cooc: dict[str, Counter] = defaultdict(Counter)
+    for tags in video_tags.values():
+        keys = list(tags)
+        for a in keys:
+            for b in keys:
+                if a != b:
+                    cooc[a][b] += 1
+
+    # --- Regroupement des tags qui ont exactement les mêmes vidéos ----------
+    # (sinon une seule vidéo virale remplit le classement avec ses 15 tags,
+    #  tous avec les mêmes chiffres)
+    group_of: dict[str, str] = {}
+    by_signature: dict[frozenset, list] = defaultdict(list)
+    for key, vids in tag_videos.items():
+        by_signature[frozenset(vids)].append(key)
+    for keys in by_signature.values():
+        leader = max(keys, key=lambda k: (sum(label_votes[k].values()), -len(k)))
+        for k in keys:
+            group_of[k] = leader
+
+    # --- Sortie pour le site ---------------------------------------------------
+    out_tags = []
+    for key, entry in tags_state.items():
+        pts = entry["points"]
+        last = pts[-1]
+        active = last["t"] == now_s
+        recent_vph = [p["vph"] for p in pts if p["vph"] is not None
+                      and now - parse_time(p["t"]) <= timedelta(minutes=35)]
+        before_vph = [p["vph"] for p in pts if p["vph"] is not None
+                      and timedelta(hours=1) <= now - parse_time(p["t"]) <= timedelta(hours=3)]
+        vph_now = mean(recent_vph[-2:]) if active else 0.0
+        vph_before = mean(before_vph)
+        trend = None
+        if active and before_vph and vph_before > 0:
+            trend = (vph_now - vph_before) / vph_before
+
+        series = [[p["t"], p["vph"]] for p in pts
+                  if p["vph"] is not None and now - parse_time(p["t"]) <= SERIES_WINDOW]
+        vids = sorted(tag_videos.get(key, []), key=lambda v: (video_vph[v] or 0, videos_state[v]["v"]), reverse=True)
+        cats = Counter(video_cat[v] for v in vids)
+
+        item = {
+            "key": key,
+            "label": entry.get("label", key),
+            "active": active,
+            "first_seen": entry["first"],
+            "last_seen": last["t"],
+            "n": last["n"] if active else 0,
+            "views": last["views"],
+            "vph": round(vph_now),
+            "trend": round(trend, 3) if trend is not None else None,
+            "cat": cats.most_common(1)[0][0] if cats else None,
+            "group": group_of.get(key, key),
+        }
+        if active:
+            item["series"] = downsample(series, SERIES_POINTS)
+            item["videos"] = [
+                {"id": v, "title": videos_state[v]["title"], "ch": videos_state[v]["ch"],
+                 "views": videos_state[v]["v"],
+                 "vph": round(video_vph[v]) if video_vph[v] is not None else None}
+                for v in vids[:3]
+            ]
+            item["related"] = [k for k, _ in cooc[key].most_common(6)]
+        out_tags.append(item)
+
+    output = {
+        "version": 2,
+        "generated_at": now_s,
+        "region": REGION,
+        "videos_analyzed": total_videos,
+        "shorts_analyzed": len(shorts),
+        "tags": out_tags,
+    }
+    with open(DATA_PATH, "w", encoding="utf-8") as f:
+        json.dump(output, f, ensure_ascii=False, separators=(",", ":"))
+
+    active_count = sum(1 for t in out_tags if t["active"])
+    print(f"{active_count} hashtags actifs ({len(out_tags)} en mémoire) écrits dans {DATA_PATH}")
 
 
 if __name__ == "__main__":
